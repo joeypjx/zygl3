@@ -34,9 +34,9 @@ int main() {
     // 4. 创建UDP组播服务
     std::cout << "\n创建UDP组播服务..." << std::endl;
     auto broadcaster = std::make_shared<ResourceMonitorBroadcaster>(
-        chassisRepo, "234.186.1.99", 0x100A);
+        chassisRepo, stackRepo, "234.186.1.99", 0x100A);
     broadcaster->Start();
-    
+
     auto listener = std::make_shared<ResourceMonitorListener>(
         broadcaster, "234.186.1.98", 0x100A);
     listener->Start();
