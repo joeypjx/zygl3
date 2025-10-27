@@ -1,0 +1,52 @@
+# 构建目录
+build/
+cmake-build-*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 编译产物
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+zygl3
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# 日志
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+
+# macOS
+.DS_Store
+
+# 下载的第三方库（会通过脚本自动下载）
+# 允许根目录和基础设施层的第三方库
+!httplib.h
+!json.hpp
+infrastructure/api_client/httplib.h
+infrastructure/api_client/json.hpp
+
+# 系统文件
+Thumbs.db
+
