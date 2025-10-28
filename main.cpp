@@ -5,6 +5,7 @@
 #include "infrastructure/collectors/data_collector_service.h"
 #include "interfaces/udp/resource_monitor_broadcaster.h"
 #include "interfaces/http/alert_receiver_server.h"
+#include "infrastructure/config/config_manager.h"
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -16,6 +17,9 @@ using namespace app::interfaces;
 int main() {
     std::cout << "=== 系统启动：初始化机箱数据 ===" << std::endl;
     
+    // 0. 加载配置
+    ConfigManager::LoadFromFile("config.json");
+
     // 1. 创建仓储
     auto chassisRepo = std::make_shared<InMemoryChassisRepository>();
     auto stackRepo = std::make_shared<InMemoryStackRepository>();
@@ -32,30 +36,36 @@ int main() {
     
     std::cout << "\n初始化完成！仓储中共有 " << chassisRepo->Size() << " 个机箱" << std::endl;
     
-    // 4. 创建 API 客户端（实际使用时需要替换为真实地址）
-    std::string apiBaseUrl = "localhost";
-    int apiPort = 8080;
+    // 4. 创建 API 客户端（读取配置）
+    std::string apiBaseUrl = ConfigManager::GetString("/api/base_url", "localhost");
+    int apiPort = ConfigManager::GetInt("/api/port", 8080);
     auto apiClient = std::make_shared<QywApiClient>(apiBaseUrl, apiPort);
     
-    // 5. 创建UDP组播服务
+    // 5. 创建UDP组播服务（读取配置）
     std::cout << "\n创建UDP组播服务..." << std::endl;
+    std::string udpBroadcasterGroup = ConfigManager::GetString("/udp/broadcaster/multicast_group", "234.186.1.99");
+    uint16_t udpPort = static_cast<uint16_t>(ConfigManager::GetInt("/udp/port", 0x100A));
     auto broadcaster = std::make_shared<ResourceMonitorBroadcaster>(
-        chassisRepo, stackRepo, apiClient, "234.186.1.99", 0x100A);
+        chassisRepo, stackRepo, apiClient, udpBroadcasterGroup, udpPort);
     broadcaster->Start();
 
     auto listener = std::make_shared<ResourceMonitorListener>(
-        broadcaster, "234.186.1.98", 0x100A);
+        broadcaster,
+        ConfigManager::GetString("/udp/listener/multicast_group", "234.186.1.98"),
+        udpPort);
     listener->Start();
     
-    // 6. 创建HTTP告警接收服务器
+    // 6. 创建HTTP告警接收服务器（读取配置）
     std::cout << "\n创建HTTP告警接收服务器..." << std::endl;
-    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, 8888);
+    int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
+    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, httpAlertPort);
     alertServer->Start();
     
-    // 7. 创建数据采集服务
+    // 7. 创建数据采集服务（读取配置）
     std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
-    std::string clientIp = "192.168.6.222";  // 客户端IP地址
-    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, 10);
+    std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
+    int intervalSeconds = ConfigManager::GetInt("/collector/interval_seconds", 10);
+    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, intervalSeconds);
     
     // 8. 启动数据采集（在后台线程运行）
     std::cout << "启动数据采集服务..." << std::endl;

@@ -1,0 +1,25 @@
+{
+  "_comment": "715平台资源监控系统配置文件",
+  "api": {
+    "base_url": "localhost",
+    "port": 8080
+  },
+  "heartbeat": {
+    "client_ip": "192.168.6.222"
+  },
+  "udp": {
+    "port": 4106,
+    "broadcaster": {
+      "multicast_group": "234.186.1.99"
+    },
+    "listener": {
+      "multicast_group": "234.186.1.98"
+    }
+  },
+  "alert_server": {
+    "port": 8888
+  },
+  "collector": {
+    "interval_seconds": 10
+  }
+}

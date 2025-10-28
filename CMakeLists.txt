@@ -10,6 +10,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # 源文件
 set(SOURCES
     main.cpp
+    infrastructure/config/config_manager.cpp
     infrastructure/api_client/qyw_api_client.cpp
     infrastructure/collectors/data_collector_service.cpp
     interfaces/udp/resource_monitor_broadcaster.cpp
@@ -18,6 +19,13 @@ set(SOURCES
 
 # 创建可执行文件
 add_executable(zygl3 ${SOURCES})
+
+# 运行时资源：将配置文件复制到可执行文件目录
+add_custom_command(TARGET zygl3 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/config.json
+            $<TARGET_FILE_DIR:zygl3>/config.json
+)
 
 # 链接系统库（如果需要）
 if(UNIX AND NOT APPLE)
