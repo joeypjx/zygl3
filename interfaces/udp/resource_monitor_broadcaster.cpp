@@ -496,6 +496,51 @@ std::string ResourceMonitorBroadcaster::WorkModeToLabel(uint16_t workMode) {
     return "模式" + std::to_string(workMode);
 }
 
+bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescription) {
+    if (m_socket < 0) {
+        std::cerr << "发送故障上报失败: socket未初始化" << std::endl;
+        return false;
+    }
+    
+    // 构建故障上报报文
+    FaultReportPacket packet;
+    memset(&packet, 0, sizeof(packet));
+    
+    // 设置头部（22字节）
+    memset(packet.header, 0, 22);
+    
+    // 设置命令码 F107H
+    packet.command = 0xF107;
+    
+    // 设置故障描述（最多256字符）
+    size_t descLen = faultDescription.length();
+    if (descLen > 256) {
+        descLen = 256;
+        std::cerr << "警告: 故障描述过长，已截断为256字符" << std::endl;
+    }
+    strncpy(packet.faultDescription, faultDescription.c_str(), descLen);
+    packet.faultDescription[descLen] = '\0';
+    
+    // 设置发送地址
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(m_port);
+    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
+    
+    // 发送组播数据包
+    int result = sendto(m_socket, &packet, sizeof(packet), 0,
+                        (struct sockaddr*)&addr, sizeof(addr));
+    
+    if (result > 0) {
+        std::cout << "发送故障上报成功: " << faultDescription.substr(0, 50) << "..." << std::endl;
+        return true;
+    }
+    
+    std::cerr << "发送故障上报失败: " << strerror(errno) << std::endl;
+    return false;
+}
+
 // ResourceMonitorListener 实现
 ResourceMonitorListener::ResourceMonitorListener(
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,

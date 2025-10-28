@@ -97,6 +97,33 @@ DeployResponse QywApiClient::UndeployStacks(const std::vector<std::string>& labe
     return result;
 }
 
+bool QywApiClient::SendHeartbeat(const std::string& clientIp) {
+    std::string path = "/api/v1/sys-config/client/up?clientIp=" + clientIp;
+    
+    auto res = m_client.Get(path.c_str());
+    
+    if (res && res->status == 200) {
+        try {
+            json j = json::parse(res->body);
+            
+            // 解析标准响应格式：{ "code": 0, "message": "success", "data": "success" }
+            if (j.contains("code") && j["code"] == 0) {
+                std::cout << "心跳保活发送成功，clientIp: " << clientIp << std::endl;
+                return true;
+            } else {
+                std::cerr << "心跳保活响应异常，code: " << j.value("code", -1) 
+                         << ", message: " << j.value("message", "") << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "解析心跳响应失败: " << e.what() << std::endl;
+        }
+    } else {
+        std::cerr << "心跳保活失败，状态码: " << (res ? res->status : -1) << std::endl;
+    }
+    
+    return false;
+}
+
 std::vector<BoardInfoResponse> QywApiClient::ParseBoardInfoResponse(const std::string& jsonStr) {
     std::vector<BoardInfoResponse> result;
     

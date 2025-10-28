@@ -4,6 +4,7 @@
 #include "infrastructure/api_client/qyw_api_client.h"
 #include "infrastructure/collectors/data_collector_service.h"
 #include "interfaces/udp/resource_monitor_broadcaster.h"
+#include "interfaces/http/alert_receiver_server.h"
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -46,15 +47,21 @@ int main() {
         broadcaster, "234.186.1.98", 0x100A);
     listener->Start();
     
-    // 6. 创建数据采集服务
-    std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
-    DataCollectorService collector(chassisRepo, stackRepo, apiClient, 10);
+    // 6. 创建HTTP告警接收服务器
+    std::cout << "\n创建HTTP告警接收服务器..." << std::endl;
+    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, 8888);
+    alertServer->Start();
     
-    // 7. 启动数据采集（在后台线程运行）
+    // 7. 创建数据采集服务
+    std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
+    std::string clientIp = "192.168.6.222";  // 客户端IP地址
+    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, 10);
+    
+    // 8. 启动数据采集（在后台线程运行）
     std::cout << "启动数据采集服务..." << std::endl;
     collector.Start();
     
-    // 8. 主线程等待
+    // 9. 主线程等待
     std::cout << "\n系统运行中... (按 Ctrl+C 退出)" << std::endl;
     try {
         while (true) {
@@ -64,9 +71,10 @@ int main() {
         std::cerr << "错误: " << e.what() << std::endl;
     }
     
-    // 9. 清理
+    // 10. 清理
     std::cout << "\n正在停止服务..." << std::endl;
     collector.Stop();
+    alertServer->Stop();
     listener->Stop();
     broadcaster->Stop();
     

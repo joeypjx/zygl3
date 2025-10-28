@@ -261,3 +261,25 @@ Content-Type	是	Application/json	声明请求体为json
   "data": "success"
 }
 
+
+七、心跳保活
+1.1 需求描述
+通过该接口，周期性发送心跳包，并在心跳包中包括接口调用者的IP地址
+1.2 请求地址
+接口名称：心跳保活
+请求方式：GET
+请求地址：http://api/v1/sys-config/client/up
+Content-Type：application/json
+认证方式：Bearer Token（待定）
+响应格式：JSON
+1.3 请求参数
+clientIp String 接口调用者的IP地址 如 192.168.6.222
+示例：http://api/v1/sys-config/client/up?clientIp=192.168.6.222
+1.4 响应体
+成功响应：
+{
+  "code": 0,
+  "message": "success",
+  "data": "success"
+}
+

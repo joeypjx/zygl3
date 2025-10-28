@@ -97,6 +97,15 @@ struct TaskStopResponse {
     uint16_t stopResult;      // 停止结果 0:成功 1:失败 (28-29)
     char resultDesc[64];     // 停止结果描述 (30-93)
 };
+
+/**
+ * @brief 故障上报报文
+ */
+struct FaultReportPacket {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F107H (22-23)
+    char faultDescription[256]; // 故障描述 (24-279)
+};
 #pragma pack(pop)
 
 /**
@@ -152,6 +161,13 @@ public:
      * @return 是否发送成功
      */
     bool HandleTaskStopRequest(const TaskStopRequest& request);
+
+    /**
+     * @brief 发送故障上报组播数据包
+     * @param faultDescription 故障描述（最多256字符）
+     * @return 是否发送成功
+     */
+    bool SendFaultReport(const std::string& faultDescription);
 
 private:
     /**

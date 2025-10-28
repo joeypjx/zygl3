@@ -7,6 +7,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <string>
 
 namespace app::infrastructure {
 
@@ -20,6 +21,7 @@ public:
         std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<QywApiClient> apiClient,
+        const std::string& clientIp,
         int intervalSeconds = 10);
 
     ~DataCollectorService();
@@ -63,6 +65,7 @@ private:
     std::atomic<bool> m_running;
     std::thread m_collectThread;
     int m_intervalSeconds;
+    std::string m_clientIp;
 };
 
 }

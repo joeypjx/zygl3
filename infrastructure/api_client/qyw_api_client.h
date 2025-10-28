@@ -137,6 +137,13 @@ public:
      */
     DeployResponse UndeployStacks(const std::vector<std::string>& labels);
 
+    /**
+     * @brief 发送心跳保活
+     * @param clientIp 接口调用者的IP地址
+     * @return 是否发送成功
+     */
+    bool SendHeartbeat(const std::string& clientIp);
+
 private:
     std::string m_baseUrl;
     int m_port;
