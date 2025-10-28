@@ -128,10 +128,15 @@ void DataCollectorService::CollectStackInfo() {
     
     if (stackInfos.empty()) {
         std::cout << "  业务链路信息为空，可能是API未返回数据" << std::endl;
+        // 清空现有的stacks
+        m_stackRepo->Clear();
         return;
     }
     
     std::cout << "  获取到 " << stackInfos.size() << " 条业务链路信息" << std::endl;
+    
+    // 清空现有数据，实现一次性替换
+    m_stackRepo->Clear();
     
     // 将 API 响应转换为领域对象并更新仓储
     for (const auto& apiStackInfo : stackInfos) {
