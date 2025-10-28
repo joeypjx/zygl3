@@ -56,6 +56,12 @@ private:
      * @brief 采集业务链路信息并更新仓储
      */
     void CollectStackInfo();
+    
+    /**
+     * @brief 检查所有板卡的在线状态，将超时的板卡标记为离线
+     * @param timeoutSeconds 超时秒数
+     */
+    void CheckAndMarkOfflineBoards(int timeoutSeconds = 120);
 
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;

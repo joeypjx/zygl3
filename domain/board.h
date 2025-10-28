@@ -3,6 +3,7 @@
 #include "value_objects.h"
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace app::domain {
 
@@ -54,6 +55,9 @@ public:
         } else {
             m_tasks.clear(); // 强制清空
         }
+        
+        // 更新时间戳
+        m_lastUpdateTime = std::chrono::system_clock::now();
     }
 
     /**
@@ -62,6 +66,31 @@ public:
     void MarkAsOffline() {
         m_status = BoardOperationalStatus::Offline;
         m_tasks.clear();
+        // 清空更新时间，表示离线
+        m_lastUpdateTime = std::chrono::system_clock::time_point::min();
+    }
+    
+    /**
+     * @brief 获取最后更新时间
+     */
+    std::chrono::system_clock::time_point GetLastUpdateTime() const {
+        return m_lastUpdateTime;
+    }
+    
+    /**
+     * @brief 判断板卡是否在线（基于最后更新时间）
+     * @param timeoutSeconds 超时秒数（默认60秒）
+     * @return 是否在线
+     */
+    bool IsOnline(int timeoutSeconds = 60) const {
+        // 如果从未更新过（离线状态），返回false
+        if (m_lastUpdateTime == std::chrono::system_clock::time_point::min()) {
+            return false;
+        }
+        
+        auto now = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUpdateTime).count();
+        return elapsed < timeoutSeconds;
     }
 
 private:
@@ -72,6 +101,9 @@ private:
 
     // 任务列表
     std::vector<TaskStatusInfo> m_tasks;
+    
+    // 最后更新时间（用于判断板卡是否在线）
+    std::chrono::system_clock::time_point m_lastUpdateTime = std::chrono::system_clock::time_point::min();
 };
 
 }

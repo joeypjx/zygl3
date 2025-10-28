@@ -58,6 +58,9 @@ void DataCollectorService::CollectLoop() {
             // 采集业务链路信息
             CollectStackInfo();
             
+            // 检查板卡在线状态，将超时的标记为离线
+            CheckAndMarkOfflineBoards();
+            
             std::cout << "数据采集完成，等待 " << m_intervalSeconds << " 秒..." << std::endl;
             
             // 等待指定时间
@@ -212,6 +215,34 @@ void DataCollectorService::CollectStackInfo() {
     }
     
     std::cout << "  业务链路信息更新完成" << std::endl;
+}
+
+void DataCollectorService::CheckAndMarkOfflineBoards(int timeoutSeconds) {
+    // 获取所有机箱
+    auto allChassis = m_chassisRepo->GetAll();
+    
+    int offlineCount = 0;
+    for (const auto& chassis : allChassis) {
+        auto& boards = chassis->GetAllBoardsMutable();
+        
+        for (auto& board : boards) {
+            // 检查板卡是否在线
+            if (!board.IsOnline(timeoutSeconds)) {
+                // 如果不在线且当前状态不是离线，则标记为离线
+                if (board.GetStatus() != app::domain::BoardOperationalStatus::Offline) {
+                    board.MarkAsOffline();
+                    offlineCount++;
+                    
+                    std::cout << "  板卡离线: 机箱" << chassis->GetChassisNumber() 
+                              << " 槽位" << board.GetBoardNumber() << std::endl;
+                }
+            }
+        }
+    }
+    
+    if (offlineCount > 0) {
+        std::cout << "  检测到 " << offlineCount << " 个板卡离线" << std::endl;
+    }
 }
 
 }
