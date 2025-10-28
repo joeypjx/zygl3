@@ -2,10 +2,12 @@
 
 #include "domain/i_chassis_repository.h"
 #include "domain/i_stack_repository.h"
+#include "../../infrastructure/api_client/qyw_api_client.h"
 #include <string>
 #include <memory>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 namespace app::interfaces {
 
@@ -53,6 +55,48 @@ struct TaskQueryResponse {
     uint16_t cpuUsage;        // CPU使用率 0-1000千分比
     uint32_t memoryUsage;     // 内存使用率
 };
+
+/**
+ * @brief 任务启动请求报文
+ */
+struct TaskStartRequest {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F003H (22-23)
+    uint32_t requestId;       // 请求ID (24-27)
+    uint16_t workMode;       // 工作模式/业务标签 (28-29)
+    uint16_t startStrategy;   // 启动策略 (30-31)
+};
+
+/**
+ * @brief 任务启动响应报文
+ */
+struct TaskStartResponse {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F103H (22-23)
+    uint32_t responseId;     // 响应ID (24-27)
+    uint16_t startResult;     // 启动结果 0:成功 1:失败 (28-29)
+    char resultDesc[64];      // 启动结果描述 (30-93)
+};
+
+/**
+ * @brief 任务停止请求报文
+ */
+struct TaskStopRequest {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F004H (22-23)
+    uint32_t requestId;       // 请求ID (24-27)
+};
+
+/**
+ * @brief 任务停止响应报文
+ */
+struct TaskStopResponse {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F104H (22-23)
+    uint32_t responseId;     // 响应ID (24-27)
+    uint16_t stopResult;      // 停止结果 0:成功 1:失败 (28-29)
+    char resultDesc[64];     // 停止结果描述 (30-93)
+};
 #pragma pack(pop)
 
 /**
@@ -64,6 +108,7 @@ public:
     ResourceMonitorBroadcaster(
         std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
+        std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
         const std::string& multicastGroup = "234.186.1.99",
         uint16_t port = 0x100A  // 端口100AH
     );
@@ -94,6 +139,20 @@ public:
      */
     bool SendTaskQueryResponse(const TaskQueryRequest& request);
 
+    /**
+     * @brief 处理任务启动请求并发送响应
+     * @param request 任务启动请求
+     * @return 是否发送成功
+     */
+    bool HandleTaskStartRequest(const TaskStartRequest& request);
+
+    /**
+     * @brief 处理任务停止请求并发送响应
+     * @param request 任务停止请求
+     * @return 是否发送成功
+     */
+    bool HandleTaskStopRequest(const TaskStopRequest& request);
+
 private:
     /**
      * @brief 从仓储构建响应数据
@@ -120,13 +179,29 @@ private:
     void BuildTaskQueryResponse(TaskQueryResponse& response, const TaskQueryRequest& request);
 
     /**
+     * @brief 构建任务启动响应
+     */
+    void BuildTaskStartResponse(TaskStartResponse& response, const TaskStartRequest& request);
+
+    /**
+     * @brief 构建任务停止响应
+     */
+    void BuildTaskStopResponse(TaskStopResponse& response, const TaskStopRequest& request);
+
+    /**
      * @brief 将IP地址字符串转换为uint32
      */
     uint32_t IpStringToUint32(const std::string& ipStr);
 
+    /**
+     * @brief 将字符串转换为工作模式/标签名
+     */
+    std::string WorkModeToLabel(uint16_t workMode);
+
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
+    std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
     std::string m_multicastGroup;
     uint16_t m_port;
     int m_socket;
@@ -135,6 +210,10 @@ private:
     std::atomic<uint32_t> m_nextResponseId;
 
     ResourceMonitorResponse m_responseBuffer;
+
+    // 当前运行的任务标签（互斥访问）
+    std::string m_currentRunningLabel;
+    std::mutex m_labelMutex;
 };
 
 /**

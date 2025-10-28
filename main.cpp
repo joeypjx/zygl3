@@ -31,20 +31,20 @@ int main() {
     
     std::cout << "\n初始化完成！仓储中共有 " << chassisRepo->Size() << " 个机箱" << std::endl;
     
-    // 4. 创建UDP组播服务
+    // 4. 创建 API 客户端（实际使用时需要替换为真实地址）
+    std::string apiBaseUrl = "localhost";
+    int apiPort = 8080;
+    auto apiClient = std::make_shared<QywApiClient>(apiBaseUrl, apiPort);
+    
+    // 5. 创建UDP组播服务
     std::cout << "\n创建UDP组播服务..." << std::endl;
     auto broadcaster = std::make_shared<ResourceMonitorBroadcaster>(
-        chassisRepo, stackRepo, "234.186.1.99", 0x100A);
+        chassisRepo, stackRepo, apiClient, "234.186.1.99", 0x100A);
     broadcaster->Start();
 
     auto listener = std::make_shared<ResourceMonitorListener>(
         broadcaster, "234.186.1.98", 0x100A);
     listener->Start();
-    
-    // 5. 创建 API 客户端（实际使用时需要替换为真实地址）
-    std::string apiBaseUrl = "localhost";
-    int apiPort = 8080;
-    auto apiClient = std::make_shared<QywApiClient>(apiBaseUrl, apiPort);
     
     // 6. 创建数据采集服务
     std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
