@@ -11,11 +11,13 @@ AlertReceiverServer::AlertReceiverServer(
     std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
     std::shared_ptr<app::domain::IStackRepository> stackRepo,
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
-    int port)
+    int port,
+    const std::string& host)
     : m_chassisRepo(chassisRepo)
     , m_stackRepo(stackRepo)
     , m_broadcaster(broadcaster)
     , m_port(port)
+    , m_host(host)
     , m_running(false) {
 }
 
@@ -59,8 +61,8 @@ void AlertReceiverServer::Stop() {
 }
 
 void AlertReceiverServer::ServerLoop() {
-    std::string addr = "0.0.0.0:" + std::to_string(m_port);
-    m_server.listen("0.0.0.0", m_port);
+    std::string addr = m_host + ":" + std::to_string(m_port);
+    m_server.listen(m_host.c_str(), m_port);
 }
 
 void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib::Response& res) {

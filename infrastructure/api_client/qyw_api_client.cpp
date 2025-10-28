@@ -11,10 +11,24 @@ QywApiClient::QywApiClient(const std::string& baseUrl, int port)
     : m_baseUrl(baseUrl), m_port(port), m_client(baseUrl.c_str(), port) {
 }
 
+void QywApiClient::SetEndpoint(const std::string& name, const std::string& path) {
+    if (name == "boardinfo") {
+        m_boardinfoEndpoint = path;
+    } else if (name == "stackinfo") {
+        m_stackinfoEndpoint = path;
+    } else if (name == "deploy") {
+        m_deployEndpoint = path;
+    } else if (name == "undeploy") {
+        m_undeployEndpoint = path;
+    } else if (name == "heartbeat") {
+        m_heartbeatEndpoint = path;
+    }
+}
+
 std::vector<BoardInfoResponse> QywApiClient::GetBoardInfo() {
     std::vector<BoardInfoResponse> result;
     
-    auto res = m_client.Get("/api/v1/external/qyw/boardinfo");
+    auto res = m_client.Get(m_boardinfoEndpoint.c_str());
     
     if (res && res->status == 200) {
         try {
@@ -33,7 +47,7 @@ std::vector<BoardInfoResponse> QywApiClient::GetBoardInfo() {
 std::vector<StackInfoResponse> QywApiClient::GetStackInfo() {
     std::vector<StackInfoResponse> result;
     
-    auto res = m_client.Get("/api/v1/external/qyw/stackinfo");
+    auto res = m_client.Get(m_stackinfoEndpoint.c_str());
     
     if (res && res->status == 200) {
         try {
@@ -54,7 +68,7 @@ DeployResponse QywApiClient::DeployStacks(const std::vector<std::string>& labels
     json requestBody;
     requestBody["stackLabels"] = labels;
 
-    auto res = m_client.Post("/api/v1/external/qyw/deploy",
+    auto res = m_client.Post(m_deployEndpoint.c_str(),
                              requestBody.dump(),
                              "application/json");
 
@@ -78,7 +92,7 @@ DeployResponse QywApiClient::UndeployStacks(const std::vector<std::string>& labe
     json requestBody;
     requestBody["stackLabels"] = labels;
 
-    auto res = m_client.Post("/api/v1/external/qyw/undeploy",
+    auto res = m_client.Post(m_undeployEndpoint.c_str(),
                              requestBody.dump(),
                              "application/json");
 
@@ -98,7 +112,7 @@ DeployResponse QywApiClient::UndeployStacks(const std::vector<std::string>& labe
 }
 
 bool QywApiClient::SendHeartbeat(const std::string& clientIp) {
-    std::string path = "/api/v1/sys-config/client/up?clientIp=" + clientIp;
+    std::string path = m_heartbeatEndpoint + "?clientIp=" + clientIp;
     
     auto res = m_client.Get(path.c_str());
     

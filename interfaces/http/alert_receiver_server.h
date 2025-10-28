@@ -67,7 +67,8 @@ public:
         std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
-        int port = 8888
+        int port = 8888,
+        const std::string& host = "0.0.0.0"
     );
 
     ~AlertReceiverServer();
@@ -118,6 +119,7 @@ private:
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<ResourceMonitorBroadcaster> m_broadcaster;
     int m_port;
+    std::string m_host;
     httplib::Server m_server;
     
     std::atomic<bool> m_running;

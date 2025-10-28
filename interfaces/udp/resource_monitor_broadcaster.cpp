@@ -53,6 +53,15 @@ void ResourceMonitorBroadcaster::Start() {
               << ":" << m_port << ")" << std::endl;
 }
 
+void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitor, uint16_t taskQueryResp, 
+                                             uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport) {
+    m_cmdResourceMonitor = resourceMonitor;
+    m_cmdTaskQueryResp = taskQueryResp;
+    m_cmdTaskStartResp = taskStartResp;
+    m_cmdTaskStopResp = taskStopResp;
+    m_cmdFaultReport = faultReport;
+}
+
 void ResourceMonitorBroadcaster::Stop() {
     m_running = false;
     std::cout << "资源监控广播器已停止" << std::endl;
@@ -71,7 +80,7 @@ bool ResourceMonitorBroadcaster::SendResponse(uint32_t requestId) {
     memset(response.header, 0, 22);
     
     // 设置命令码
-    response.command = 0xF000;
+    response.command = m_cmdResourceMonitor;
     
     // 设置响应ID
     response.responseId = m_nextResponseId++;
@@ -180,7 +189,7 @@ bool ResourceMonitorBroadcaster::SendTaskQueryResponse(const TaskQueryRequest& r
     memset(response.header, 0, 22);
 
     // 设置命令码
-    response.command = 0xF105;
+    response.command = m_cmdTaskQueryResp;
 
     // 设置响应ID
     response.responseId = m_nextResponseId++;
@@ -295,7 +304,7 @@ bool ResourceMonitorBroadcaster::HandleTaskStartRequest(const TaskStartRequest& 
     memset(response.header, 0, 22);
 
     // 设置命令码
-    response.command = 0xF103;
+    response.command = m_cmdTaskStartResp;
 
     // 设置响应ID
     response.responseId = m_nextResponseId++;
@@ -337,7 +346,7 @@ bool ResourceMonitorBroadcaster::HandleTaskStopRequest(const TaskStopRequest& re
     memset(response.header, 0, 22);
 
     // 设置命令码
-    response.command = 0xF104;
+    response.command = m_cmdTaskStopResp;
 
     // 设置响应ID
     response.responseId = m_nextResponseId++;
@@ -509,8 +518,8 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     // 设置头部（22字节）
     memset(packet.header, 0, 22);
     
-    // 设置命令码 F107H
-    packet.command = 0xF107;
+    // 设置命令码
+    packet.command = m_cmdFaultReport;
     
     // 设置故障描述（最多256字符）
     size_t descLen = faultDescription.length();
@@ -624,6 +633,14 @@ void ResourceMonitorListener::Stop() {
     std::cout << "资源监控监听器已停止" << std::endl;
 }
 
+void ResourceMonitorListener::SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
+                                          uint16_t taskStart, uint16_t taskStop) {
+    m_cmdResourceMonitor = resourceMonitor;
+    m_cmdTaskQuery = taskQuery;
+    m_cmdTaskStart = taskStart;
+    m_cmdTaskStop = taskStop;
+}
+
 void ResourceMonitorListener::ListenLoop() {
     std::cout << "开始监听组播请求..." << std::endl;
 
@@ -642,7 +659,7 @@ void ResourceMonitorListener::ListenLoop() {
                 uint16_t command;
                 memcpy(&command, buffer + 22, 2);
 
-                if (command == 0xF000 && recvLen >= sizeof(ResourceMonitorRequest)) {
+                if (command == m_cmdResourceMonitor && recvLen >= sizeof(ResourceMonitorRequest)) {
                     // 资源监控请求
                     ResourceMonitorRequest* request = (ResourceMonitorRequest*)buffer;
                     std::cout << "收到资源监控请求: ID=" << request->requestId << std::endl;
@@ -652,7 +669,7 @@ void ResourceMonitorListener::ListenLoop() {
                         m_broadcaster->SendResponse(request->requestId);
                     }
                 }
-                else if (command == 0xF005 && recvLen >= sizeof(TaskQueryRequest)) {
+                else if (command == m_cmdTaskQuery && recvLen >= sizeof(TaskQueryRequest)) {
                     // 任务查看请求
                     TaskQueryRequest* request = (TaskQueryRequest*)buffer;
                     std::cout << "收到任务查看请求: 机箱" << request->chassisNumber
@@ -665,7 +682,7 @@ void ResourceMonitorListener::ListenLoop() {
                         m_broadcaster->SendTaskQueryResponse(*request);
                     }
                 }
-                else if (command == 0xF003 && recvLen >= sizeof(TaskStartRequest)) {
+                else if (command == m_cmdTaskStart && recvLen >= sizeof(TaskStartRequest)) {
                     // 任务启动请求
                     TaskStartRequest* request = (TaskStartRequest*)buffer;
                     std::cout << "收到任务启动请求: 工作模式=" << request->workMode
@@ -677,7 +694,7 @@ void ResourceMonitorListener::ListenLoop() {
                         m_broadcaster->HandleTaskStartRequest(*request);
                     }
                 }
-                else if (command == 0xF004 && recvLen >= sizeof(TaskStopRequest)) {
+                else if (command == m_cmdTaskStop && recvLen >= sizeof(TaskStopRequest)) {
                     // 任务停止请求
                     TaskStopRequest* request = (TaskStopRequest*)buffer;
                     std::cout << "收到任务停止请求: (请求ID=" << request->requestId << ")" << std::endl;

@@ -110,6 +110,9 @@ class QywApiClient {
 public:
     QywApiClient(const std::string& baseUrl, int port);
     ~QywApiClient() = default;
+    
+    // 设置端点路径（从配置读取）
+    void SetEndpoint(const std::string& name, const std::string& path);
 
     /**
      * @brief 获取所有板卡信息和状态
@@ -148,6 +151,13 @@ private:
     std::string m_baseUrl;
     int m_port;
     httplib::Client m_client;
+    
+    // 端点路径
+    std::string m_boardinfoEndpoint = "/api/v1/external/qyw/boardinfo";
+    std::string m_stackinfoEndpoint = "/api/v1/external/qyw/stackinfo";
+    std::string m_deployEndpoint = "/api/v1/external/qyw/deploy";
+    std::string m_undeployEndpoint = "/api/v1/external/qyw/undeploy";
+    std::string m_heartbeatEndpoint = "/api/v1/sys-config/client/up";
 
     /**
      * @brief 解析板卡信息的JSON响应

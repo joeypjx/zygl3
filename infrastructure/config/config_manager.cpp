@@ -53,6 +53,34 @@ int ConfigManager::GetInt(const std::string& pointer, int def) {
     }
 }
 
+uint16_t ConfigManager::GetHexUint16(const std::string& pointer, uint16_t def) {
+    try {
+        std::string hexStr = s_config.at(json::json_pointer(pointer)).get<std::string>();
+        // 移除 "0x" 前缀（如果有）
+        if (hexStr.length() > 2 && hexStr.substr(0, 2) == "0x") {
+            hexStr = hexStr.substr(2);
+        }
+        // 转换为整数
+        return static_cast<uint16_t>(std::stoul(hexStr, nullptr, 16));
+    } catch (...) {
+        return def;
+    }
+}
+
+uint32_t ConfigManager::GetHexUint32(const std::string& pointer, uint32_t def) {
+    try {
+        std::string hexStr = s_config.at(json::json_pointer(pointer)).get<std::string>();
+        // 移除 "0x" 前缀（如果有）
+        if (hexStr.length() > 2 && hexStr.substr(0, 2) == "0x") {
+            hexStr = hexStr.substr(2);
+        }
+        // 转换为整数
+        return static_cast<uint32_t>(std::stoul(hexStr, nullptr, 16));
+    } catch (...) {
+        return def;
+    }
+}
+
 }
 
 

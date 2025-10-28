@@ -41,24 +41,49 @@ int main() {
     int apiPort = ConfigManager::GetInt("/api/port", 8080);
     auto apiClient = std::make_shared<QywApiClient>(apiBaseUrl, apiPort);
     
+    // 设置API端点路径
+    apiClient->SetEndpoint("boardinfo", ConfigManager::GetString("/api/endpoints/boardinfo", "/api/v1/external/qyw/boardinfo"));
+    apiClient->SetEndpoint("stackinfo", ConfigManager::GetString("/api/endpoints/stackinfo", "/api/v1/external/qyw/stackinfo"));
+    apiClient->SetEndpoint("deploy", ConfigManager::GetString("/api/endpoints/deploy", "/api/v1/external/qyw/deploy"));
+    apiClient->SetEndpoint("undeploy", ConfigManager::GetString("/api/endpoints/undeploy", "/api/v1/external/qyw/undeploy"));
+    apiClient->SetEndpoint("heartbeat", ConfigManager::GetString("/api/endpoints/heartbeat", "/api/v1/sys-config/client/up"));
+    
     // 5. 创建UDP组播服务（读取配置）
     std::cout << "\n创建UDP组播服务..." << std::endl;
     std::string udpBroadcasterGroup = ConfigManager::GetString("/udp/broadcaster/multicast_group", "234.186.1.99");
     uint16_t udpPort = static_cast<uint16_t>(ConfigManager::GetInt("/udp/port", 0x100A));
     auto broadcaster = std::make_shared<ResourceMonitorBroadcaster>(
         chassisRepo, stackRepo, apiClient, udpBroadcasterGroup, udpPort);
+    
+    // 设置UDP广播器命令码
+    broadcaster->SetCommand(
+        ConfigManager::GetHexUint16("/udp/commands/resource_monitor", 0xF000),
+        ConfigManager::GetHexUint16("/udp/commands/task_query_resp", 0xF105),
+        ConfigManager::GetHexUint16("/udp/commands/task_start_resp", 0xF103),
+        ConfigManager::GetHexUint16("/udp/commands/task_stop_resp", 0xF104),
+        ConfigManager::GetHexUint16("/udp/commands/fault_report", 0xF107)
+    );
     broadcaster->Start();
 
     auto listener = std::make_shared<ResourceMonitorListener>(
         broadcaster,
         ConfigManager::GetString("/udp/listener/multicast_group", "234.186.1.98"),
         udpPort);
+    
+    // 设置UDP监听器命令码
+    listener->SetCommand(
+        ConfigManager::GetHexUint16("/udp/commands/resource_monitor", 0xF000),
+        ConfigManager::GetHexUint16("/udp/commands/task_query", 0xF005),
+        ConfigManager::GetHexUint16("/udp/commands/task_start", 0xF003),
+        ConfigManager::GetHexUint16("/udp/commands/task_stop", 0xF004)
+    );
     listener->Start();
     
     // 6. 创建HTTP告警接收服务器（读取配置）
     std::cout << "\n创建HTTP告警接收服务器..." << std::endl;
     int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
-    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, httpAlertPort);
+    std::string httpAlertHost = ConfigManager::GetString("/alert_server/host", "0.0.0.0");
+    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, httpAlertPort, httpAlertHost);
     alertServer->Start();
     
     // 7. 创建数据采集服务（读取配置）

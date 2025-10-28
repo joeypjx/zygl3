@@ -168,6 +168,10 @@ public:
      * @return 是否发送成功
      */
     bool SendFaultReport(const std::string& faultDescription);
+    
+    // 设置UDP命令码（从配置读取）
+    void SetCommand(uint16_t resourceMonitor, uint16_t taskQueryResp, 
+                    uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport);
 
 private:
     /**
@@ -230,6 +234,13 @@ private:
     // 当前运行的任务标签（互斥访问）
     std::string m_currentRunningLabel;
     std::mutex m_labelMutex;
+    
+    // UDP命令码
+    uint16_t m_cmdResourceMonitor = 0xF000;
+    uint16_t m_cmdTaskQueryResp = 0xF105;
+    uint16_t m_cmdTaskStartResp = 0xF103;
+    uint16_t m_cmdTaskStopResp = 0xF104;
+    uint16_t m_cmdFaultReport = 0xF107;
 };
 
 /**
@@ -255,6 +266,10 @@ public:
      * @brief 停止监听服务
      */
     void Stop();
+    
+    // 设置UDP命令码（从配置读取）
+    void SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
+                    uint16_t taskStart, uint16_t taskStop);
 
 private:
     /**
@@ -270,6 +285,12 @@ private:
     
     std::atomic<bool> m_running;
     std::thread m_listenThread;
+    
+    // UDP命令码
+    uint16_t m_cmdResourceMonitor = 0xF000;
+    uint16_t m_cmdTaskQuery = 0xF005;
+    uint16_t m_cmdTaskStart = 0xF003;
+    uint16_t m_cmdTaskStop = 0xF004;
 };
 
 }

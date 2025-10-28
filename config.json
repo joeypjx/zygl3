@@ -2,7 +2,16 @@
   "_comment": "715平台资源监控系统配置文件",
   "api": {
     "base_url": "localhost",
-    "port": 8080
+    "port": 8080,
+    "endpoints": {
+      "boardinfo": "/api/v1/external/qyw/boardinfo",
+      "stackinfo": "/api/v1/external/qyw/stackinfo",
+      "deploy": "/api/v1/external/qyw/deploy",
+      "undeploy": "/api/v1/external/qyw/undeploy",
+      "heartbeat": "/api/v1/sys-config/client/up"
+    },
+    "timeout": 30,
+    "retry_count": 3
   },
   "heartbeat": {
     "client_ip": "192.168.6.222"
@@ -14,12 +23,29 @@
     },
     "listener": {
       "multicast_group": "234.186.1.98"
+    },
+    "commands": {
+      "resource_monitor": "0xF000",
+      "task_start": "0xF003",
+      "task_stop": "0xF004",
+      "task_query": "0xF005",
+      "task_start_resp": "0xF103",
+      "task_stop_resp": "0xF104",
+      "task_query_resp": "0xF105",
+      "fault_report": "0xF107"
     }
   },
   "alert_server": {
-    "port": 8888
+    "port": 8888,
+    "host": "0.0.0.0"
   },
   "collector": {
     "interval_seconds": 10
+  },
+  "topology": {
+    "max_chassis_count": 9,
+    "boards_per_chassis": 14,
+    "max_tasks_per_board": 8,
+    "ip_generation_pattern": "192.168.0.{chassis}00{slot}"
   }
 }
