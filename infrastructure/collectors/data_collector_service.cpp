@@ -8,13 +8,15 @@ DataCollectorService::DataCollectorService(
     std::shared_ptr<app::domain::IStackRepository> stackRepo,
     std::shared_ptr<QywApiClient> apiClient,
     const std::string& clientIp,
-    int intervalSeconds)
+    int intervalSeconds,
+    int boardTimeoutSeconds)
     : m_chassisRepo(chassisRepo)
     , m_stackRepo(stackRepo)
     , m_apiClient(apiClient)
     , m_running(false)
     , m_intervalSeconds(intervalSeconds)
-    , m_clientIp(clientIp) {
+    , m_clientIp(clientIp)
+    , m_boardTimeoutSeconds(boardTimeoutSeconds) {
 }
 
 DataCollectorService::~DataCollectorService() {
@@ -59,7 +61,7 @@ void DataCollectorService::CollectLoop() {
             CollectStackInfo();
             
             // 检查板卡在线状态，将超时的标记为离线
-            CheckAndMarkOfflineBoards();
+            CheckAndMarkOfflineBoards(m_boardTimeoutSeconds);
             
             std::cout << "数据采集完成，等待 " << m_intervalSeconds << " 秒..." << std::endl;
             

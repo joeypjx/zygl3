@@ -90,7 +90,8 @@ int main() {
     std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
     std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
     int intervalSeconds = ConfigManager::GetInt("/collector/interval_seconds", 10);
-    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, intervalSeconds);
+    int boardTimeoutSeconds = ConfigManager::GetInt("/collector/board_timeout_seconds", 120);
+    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, intervalSeconds, boardTimeoutSeconds);
     
     // 8. 启动数据采集（在后台线程运行）
     std::cout << "启动数据采集服务..." << std::endl;

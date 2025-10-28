@@ -22,7 +22,8 @@ public:
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<QywApiClient> apiClient,
         const std::string& clientIp,
-        int intervalSeconds = 10);
+        int intervalSeconds = 10,
+        int boardTimeoutSeconds = 120);
 
     ~DataCollectorService();
 
@@ -59,9 +60,9 @@ private:
     
     /**
      * @brief 检查所有板卡的在线状态，将超时的板卡标记为离线
-     * @param timeoutSeconds 超时秒数
+     * @param timeoutSeconds 超时秒数（从配置读取）
      */
-    void CheckAndMarkOfflineBoards(int timeoutSeconds = 120);
+    void CheckAndMarkOfflineBoards(int timeoutSeconds);
 
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
@@ -72,6 +73,7 @@ private:
     std::thread m_collectThread;
     int m_intervalSeconds;
     std::string m_clientIp;
+    int m_boardTimeoutSeconds;  // 板卡超时秒数
 };
 
 }
