@@ -15,6 +15,7 @@ set(SOURCES
     infrastructure/collectors/data_collector_service.cpp
     interfaces/udp/resource_monitor_broadcaster.cpp
     interfaces/http/alert_receiver_server.cpp
+    interfaces/cli/cli_service.cpp
 )
 
 # 创建可执行文件

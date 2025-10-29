@@ -5,6 +5,7 @@
 #include "infrastructure/collectors/data_collector_service.h"
 #include "interfaces/udp/resource_monitor_broadcaster.h"
 #include "interfaces/http/alert_receiver_server.h"
+#include "interfaces/cli/cli_service.h"
 #include "infrastructure/config/config_manager.h"
 #include <iostream>
 #include <memory>
@@ -48,7 +49,12 @@ int main() {
     apiClient->SetEndpoint("undeploy", ConfigManager::GetString("/api/endpoints/undeploy", "/api/v1/external/qyw/undeploy"));
     apiClient->SetEndpoint("heartbeat", ConfigManager::GetString("/api/endpoints/heartbeat", "/api/v1/sys-config/client/up"));
     
-    // 5. 创建UDP组播服务（读取配置）
+    // 5. 创建CLI服务
+    std::cout << "\n启动CLI服务..." << std::endl;
+    auto cliService = std::make_shared<CliService>(chassisRepo, stackRepo, apiClient);
+    cliService->Start();
+    
+    // 6. 创建UDP组播服务（读取配置）
     std::cout << "\n创建UDP组播服务..." << std::endl;
     std::string udpBroadcasterGroup = ConfigManager::GetString("/udp/broadcaster/multicast_group", "234.186.1.99");
     uint16_t udpPort = static_cast<uint16_t>(ConfigManager::GetInt("/udp/port", 0x100A));
@@ -79,25 +85,25 @@ int main() {
     );
     listener->Start();
     
-    // 6. 创建HTTP告警接收服务器（读取配置）
+    // 9. 创建HTTP告警接收服务器（读取配置）
     std::cout << "\n创建HTTP告警接收服务器..." << std::endl;
     int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
     std::string httpAlertHost = ConfigManager::GetString("/alert_server/host", "0.0.0.0");
     auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, httpAlertPort, httpAlertHost);
     alertServer->Start();
     
-    // 7. 创建数据采集服务（读取配置）
+    // 10. 创建数据采集服务（读取配置）
     std::cout << "\n创建数据采集服务（采集间隔：10秒）..." << std::endl;
     std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
     int intervalSeconds = ConfigManager::GetInt("/collector/interval_seconds", 10);
     int boardTimeoutSeconds = ConfigManager::GetInt("/collector/board_timeout_seconds", 120);
     DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, intervalSeconds, boardTimeoutSeconds);
     
-    // 8. 启动数据采集（在后台线程运行）
+    // 11. 启动数据采集（在后台线程运行）
     std::cout << "启动数据采集服务..." << std::endl;
     collector.Start();
     
-    // 9. 主线程等待
+    // 12. 主线程等待
     std::cout << "\n系统运行中... (按 Ctrl+C 退出)" << std::endl;
     try {
         while (true) {
@@ -107,12 +113,13 @@ int main() {
         std::cerr << "错误: " << e.what() << std::endl;
     }
     
-    // 10. 清理
+    // 13. 清理
     std::cout << "\n正在停止服务..." << std::endl;
     collector.Stop();
     alertServer->Stop();
     listener->Stop();
     broadcaster->Stop();
+    cliService->Stop();
     
     std::cout << "\n系统运行结束" << std::endl;
     

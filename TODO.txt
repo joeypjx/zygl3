@@ -2,7 +2,5 @@
 2 according to update time to change model status
 3 add alert send and netReceive
 
-添加配置文件，使用配置文件来设置软件里的参数
-创建一个工具类，读取配置文件，维持一个json对象，其他想要获取配置信息的地方，通过工具类的静态方法去获取json对象的某一个节点值
 
-软件中还有哪些地方可以进行配置
+给软件添加cli功能，在命令行通过交互输入指令，可打印机箱全量信息、业务信息、指定任务信息、启动指定标签的业务、停止当前业务
