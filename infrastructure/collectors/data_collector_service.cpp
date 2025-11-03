@@ -52,7 +52,7 @@ void DataCollectorService::CollectLoop() {
             std::cout << "\n开始采集数据..." << std::endl;
             
             // 发送心跳保活
-            m_apiClient->SendHeartbeat(m_clientIp);
+            SendHeartbeat();
             
             // 采集板卡信息
             CollectBoardInfo();
@@ -111,8 +111,23 @@ void DataCollectorService::CollectBoardInfo() {
                     taskInfos.push_back(taskInfo);
                 }
                 
+                // 转换为 FanSpeed 列表
+                std::vector<app::domain::FanSpeed> fanSpeeds;
+                for (const auto& apiFanSpeed : apiBoardInfo.fanSpeeds) {
+                    app::domain::FanSpeed fanSpeed;
+                    fanSpeed.fanName = apiFanSpeed.fanName;
+                    fanSpeed.speed = apiFanSpeed.speed;
+                    fanSpeeds.push_back(fanSpeed);
+                }
+                
                 // 更新板卡状态
-                board->UpdateFromApiData(apiBoardInfo.boardStatus, taskInfos);
+                board->UpdateFromApiData(apiBoardInfo.boardName,
+                                        apiBoardInfo.boardStatus,
+                                        apiBoardInfo.voltage,
+                                        apiBoardInfo.current,
+                                        apiBoardInfo.temperature,
+                                        fanSpeeds,
+                                        taskInfos);
                 
                 // 更新到仓储
                 m_chassisRepo->UpdateBoard(apiBoardInfo.chassisNumber, 
@@ -128,6 +143,11 @@ void DataCollectorService::CollectBoardInfo() {
     }
     
     std::cout << "  板卡信息更新完成" << std::endl;
+}
+
+void DataCollectorService::SendHeartbeat() {
+    std::cout << "  发送IP心跳检测..." << std::endl;
+    m_apiClient->SendHeartbeat(m_clientIp);
 }
 
 void DataCollectorService::CollectStackInfo() {

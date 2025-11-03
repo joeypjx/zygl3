@@ -144,7 +144,7 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
             for (const auto& taskJson : j["taskAlertInfos"]) {
                 TaskAlertInfo taskAlert;
                 taskAlert.taskID = taskJson.value("taskID", "");
-                taskAlert.taskStatus = taskJson.value("taskStatus", "");
+                taskAlert.taskStatus = taskJson.value("taskStatus", 0);  // 1-运行中，2-已完成，3-异常，0-其他
                 taskAlert.chassisName = taskJson.value("chassisName", "");
                 taskAlert.chassisNumber = taskJson.value("chassisNumber", 0);
                 taskAlert.boardName = taskJson.value("boardName", "");

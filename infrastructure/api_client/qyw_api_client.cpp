@@ -1,5 +1,5 @@
 #include "qyw_api_client.h"
-#include "json.hpp"
+#include "../../json.hpp"
 #include <sstream>
 #include <iostream>
 
@@ -22,6 +22,8 @@ void QywApiClient::SetEndpoint(const std::string& name, const std::string& path)
         m_undeployEndpoint = path;
     } else if (name == "heartbeat") {
         m_heartbeatEndpoint = path;
+    } else if (name == "reset") {
+        m_resetEndpoint = path;
     }
 }
 
@@ -47,7 +49,11 @@ std::vector<BoardInfoResponse> QywApiClient::GetBoardInfo() {
 std::vector<StackInfoResponse> QywApiClient::GetStackInfo() {
     std::vector<StackInfoResponse> result;
     
-    auto res = m_client.Get(m_stackinfoEndpoint.c_str());
+    // 业务链路详情接口改为POST请求
+    json requestBody;  // POST请求体可以为空
+    auto res = m_client.Post(m_stackinfoEndpoint.c_str(),
+                             requestBody.dump(),
+                             "application/json");
     
     if (res && res->status == 200) {
         try {
@@ -63,10 +69,18 @@ std::vector<StackInfoResponse> QywApiClient::GetStackInfo() {
     return result;
 }
 
-DeployResponse QywApiClient::DeployStacks(const std::vector<std::string>& labels) {
+DeployResponse QywApiClient::DeployStacks(const std::vector<std::string>& labels, 
+                                          const std::string& account,
+                                          const std::string& password,
+                                          int stop) {
     DeployResponse result;
     json requestBody;
     requestBody["stackLabels"] = labels;
+    requestBody["account"] = account;
+    requestBody["password"] = password;
+    if (stop != 0) {
+        requestBody["stop"] = stop;
+    }
 
     auto res = m_client.Post(m_deployEndpoint.c_str(),
                              requestBody.dump(),
@@ -122,17 +136,42 @@ bool QywApiClient::SendHeartbeat(const std::string& clientIp) {
             
             // 解析标准响应格式：{ "code": 0, "message": "success", "data": "success" }
             if (j.contains("code") && j["code"] == 0) {
-                std::cout << "心跳保活发送成功，clientIp: " << clientIp << std::endl;
+                std::cout << "IP心跳检测发送成功，clientIp: " << clientIp << std::endl;
                 return true;
             } else {
-                std::cerr << "心跳保活响应异常，code: " << j.value("code", -1) 
+                std::cerr << "IP心跳检测响应异常，code: " << j.value("code", -1) 
                          << ", message: " << j.value("message", "") << std::endl;
             }
         } catch (const std::exception& e) {
             std::cerr << "解析心跳响应失败: " << e.what() << std::endl;
         }
     } else {
-        std::cerr << "心跳保活失败，状态码: " << (res ? res->status : -1) << std::endl;
+        std::cerr << "IP心跳检测失败，状态码: " << (res ? res->status : -1) << std::endl;
+    }
+    
+    return false;
+}
+
+bool QywApiClient::ResetStacks() {
+    auto res = m_client.Get(m_resetEndpoint.c_str());
+    
+    if (res && res->status == 200) {
+        try {
+            json j = json::parse(res->body);
+            
+            // 解析标准响应格式：{ "code": 0, "message": "success", "data": "success" }
+            if (j.contains("code") && j["code"] == 0) {
+                std::cout << "业务链路复位成功" << std::endl;
+                return true;
+            } else {
+                std::cerr << "业务链路复位响应异常，code: " << j.value("code", -1) 
+                         << ", message: " << j.value("message", "") << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "解析复位响应失败: " << e.what() << std::endl;
+        }
+    } else {
+        std::cerr << "业务链路复位失败，状态码: " << (res ? res->status : -1) << std::endl;
     }
     
     return false;
@@ -158,13 +197,26 @@ std::vector<BoardInfoResponse> QywApiClient::ParseBoardInfoResponse(const std::s
                 boardInfo.boardType = boardJson.value("boardType", 0);
                 boardInfo.boardAddress = boardJson.value("boardAddress", "");
                 boardInfo.boardStatus = boardJson.value("boardStatus", 0);
+                boardInfo.voltage = boardJson.value("voltage", 0.0f);
+                boardInfo.current = boardJson.value("current", 0.0f);
+                boardInfo.temperature = boardJson.value("temperature", 0.0f);
+                
+                // 解析风扇信息
+                if (boardJson.contains("fanSpeeds")) {
+                    for (const auto& fanJson : boardJson["fanSpeeds"]) {
+                        FanSpeed fanSpeed;
+                        fanSpeed.fanName = fanJson.value("fanName", "");
+                        fanSpeed.speed = fanJson.value("speed", 0.0f);
+                        boardInfo.fanSpeeds.push_back(fanSpeed);
+                    }
+                }
                 
                 // 解析任务信息
                 if (boardJson.contains("taskInfos")) {
                     for (const auto& taskJson : boardJson["taskInfos"]) {
                         BoardInfoResponse::TaskInfo taskInfo;
                         taskInfo.taskID = taskJson.value("taskID", "");
-                        taskInfo.taskStatus = taskJson.value("taskStatus", "");
+                        taskInfo.taskStatus = taskJson.value("taskStatus", 0);  // 1-运行中, 2-已完成, 3-异常, 0-其他
                         taskInfo.serviceName = taskJson.value("serviceName", "");
                         taskInfo.serviceUUID = taskJson.value("serviceUUID", "");
                         taskInfo.stackName = taskJson.value("stackName", "");
@@ -227,7 +279,7 @@ std::vector<StackInfoResponse> QywApiClient::ParseStackInfoResponse(const std::s
                             for (const auto& taskJson : serviceJson["taskInfos"]) {
                                 ServiceTaskInfo taskInfo;
                                 taskInfo.taskID = taskJson.value("taskID", "");
-                                taskInfo.taskStatus = taskJson.value("taskStatus", "");
+                                taskInfo.taskStatus = taskJson.value("taskStatus", 0);  // 1-运行中, 2-已完成, 3-异常, 0-其他
                                 taskInfo.cpuCores = taskJson.value("cpuCores", 0.0f);
                                 taskInfo.cpuUsed = taskJson.value("cpuUsed", 0.0f);
                                 taskInfo.cpuUsage = taskJson.value("cpuUsage", 0.0f);

@@ -5,9 +5,19 @@
 #include <memory>
 
 // cpp-httplib 是单头文件库
-#include "httplib.h"
+#include "../../httplib.h"
 
 namespace app::infrastructure {
+
+/**
+ * @brief 风扇信息
+ */
+struct FanSpeed {
+    std::string fanName;  // 风扇名称
+    float speed;          // 风扇转速
+    
+    FanSpeed() : speed(0.0f) {}
+};
 
 /**
  * @brief 外部API响应数据结构
@@ -20,10 +30,14 @@ struct BoardInfoResponse {
     int boardType;
     std::string boardAddress;
     int boardStatus;  // 0-正常, 1-异常
+    float voltage;    // 电压
+    float current;   // 电流
+    float temperature; // 温度
+    std::vector<FanSpeed> fanSpeeds;  // 风扇信息
     
     struct TaskInfo {
         std::string taskID;
-        std::string taskStatus;
+        int taskStatus;  // 1-运行中, 2-已完成, 3-异常, 0-其他
         std::string serviceName;
         std::string serviceUUID;
         std::string stackName;
@@ -31,7 +45,8 @@ struct BoardInfoResponse {
     };
     std::vector<TaskInfo> taskInfos;
     
-    BoardInfoResponse() : chassisNumber(0), boardNumber(0), boardType(0), boardStatus(0) {}
+    BoardInfoResponse() : chassisNumber(0), boardNumber(0), boardType(0), 
+                         boardStatus(0), voltage(0.0f), current(0.0f), temperature(0.0f) {}
 };
 
 struct LabelInfo {
@@ -41,7 +56,7 @@ struct LabelInfo {
 
 struct ServiceTaskInfo {
     std::string taskID;
-    std::string taskStatus;
+    int taskStatus;  // 1-运行中, 2-已完成, 3-异常, 0-其他
     float cpuCores;
     float cpuUsed;
     float cpuUsage;
@@ -57,7 +72,7 @@ struct ServiceTaskInfo {
     int boardNumber;
     std::string boardAddress;
     
-    ServiceTaskInfo() : chassisNumber(0), boardNumber(0) {}
+    ServiceTaskInfo() : taskStatus(0), chassisNumber(0), boardNumber(0) {}
 };
 
 struct ServiceInfo {
@@ -129,9 +144,15 @@ public:
     /**
      * @brief 批量启用业务链路
      * @param labels 业务链路标签列表
+     * @param account 用户账号
+     * @param password 密码
+     * @param stop 是否排他模式（0-不排他，1-先停止其他业务再启动本服务）
      * @return 部署结果，包含成功和失败的业务链路详情
      */
-    DeployResponse DeployStacks(const std::vector<std::string>& labels);
+    DeployResponse DeployStacks(const std::vector<std::string>& labels, 
+                                const std::string& account,
+                                const std::string& password,
+                                int stop = 0);
 
     /**
      * @brief 批量停用业务链路
@@ -141,11 +162,17 @@ public:
     DeployResponse UndeployStacks(const std::vector<std::string>& labels);
 
     /**
-     * @brief 发送心跳保活
+     * @brief 发送IP心跳检测
      * @param clientIp 接口调用者的IP地址
      * @return 是否发送成功
      */
     bool SendHeartbeat(const std::string& clientIp);
+
+    /**
+     * @brief 业务链路复位接口（停止当前所有业务链路）
+     * @return 是否操作成功
+     */
+    bool ResetStacks();
 
 private:
     std::string m_baseUrl;
@@ -155,9 +182,10 @@ private:
     // 端点路径
     std::string m_boardinfoEndpoint = "/api/v1/external/qyw/boardinfo";
     std::string m_stackinfoEndpoint = "/api/v1/external/qyw/stackinfo";
-    std::string m_deployEndpoint = "/api/v1/external/qyw/deploy";
-    std::string m_undeployEndpoint = "/api/v1/external/qyw/undeploy";
+    std::string m_deployEndpoint = "/api/v1/stacks/labels/deploy";
+    std::string m_undeployEndpoint = "/api/v1/stacks/labels/undeploy";
     std::string m_heartbeatEndpoint = "/api/v1/sys-config/client/up";
+    std::string m_resetEndpoint = "/api/v1/stacks/labels/reset";
 
     /**
      * @brief 解析板卡信息的JSON响应

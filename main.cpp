@@ -27,7 +27,8 @@ int main() {
     
     // 2. 创建工厂类并初始化系统拓扑
     ChassisFactory factory;
-    auto configs = ChassisFactory::CreateDefaultConfigs();
+    // 优先从 chassis_config.json 加载配置，如果不存在则从 config.json 或使用默认配置
+    auto configs = ChassisFactory::CreateDefaultConfigs("chassis_config.json");
     auto topology = factory.CreateFullTopology(configs);
     
     // 3. 保存所有机箱到仓储

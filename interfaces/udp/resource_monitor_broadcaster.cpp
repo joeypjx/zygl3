@@ -2,6 +2,7 @@
 #include "domain/chassis.h"
 #include "domain/board.h"
 #include "domain/value_objects.h"
+#include "../../infrastructure/config/config_manager.h"
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -163,7 +164,8 @@ void ResourceMonitorBroadcaster::MapTaskStatusToArray(uint8_t* array, int chassi
         for (size_t taskIdx = 0; taskIdx < 8; ++taskIdx) {
             if (taskIdx < tasks.size()) {
                 // 1=任务正常，2=任务异常
-                if (tasks[taskIdx].taskStatus == "running" || tasks[taskIdx].taskStatus == "正常") {
+                // taskStatus: 1-运行中，2-已完成，3-异常，0-其他
+                if (tasks[taskIdx].taskStatus == 1) {  // 运行中表示正常
                     array[boardIdx * 8 + taskIdx] = 1;
                 } else {
                     array[boardIdx * 8 + taskIdx] = 2;
@@ -424,7 +426,12 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
     
     std::vector<std::string> labels;
     labels.push_back(label);
-    auto result = m_apiClient->DeployStacks(labels);
+    
+    // 从配置读取账号密码
+    std::string account = app::infrastructure::ConfigManager::GetString("/api/account", "admin");
+    std::string password = app::infrastructure::ConfigManager::GetString("/api/password", "12q12w12ee");
+    
+    auto result = m_apiClient->DeployStacks(labels, account, password);
 
     if (result.failureStackInfos.empty() && !result.successStackInfos.empty()) {
         // 启动成功

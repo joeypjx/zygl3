@@ -111,6 +111,11 @@ private:
     std::string ServiceStatusToString(int status) const;
 
     /**
+     * @brief 将任务状态转换为字符串
+     */
+    std::string TaskStatusToString(int status) const;
+
+    /**
      * @brief 启动指定标签的业务链路
      */
     void DeployStacks(const std::vector<std::string>& labels);

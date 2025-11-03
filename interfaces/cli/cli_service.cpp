@@ -6,6 +6,7 @@
 #include "domain/board.h"
 #include "domain/stack.h"
 #include "infrastructure/api_client/qyw_api_client.h"
+#include "infrastructure/config/config_manager.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -220,12 +221,48 @@ void CliService::PrintChassisDetail(int chassisNumber) {
                   << std::setw(10) << BoardStatusToString(board.GetStatus())
                   << std::setw(8) << board.GetTasks().size() << std::endl;
         
+        // 显示板卡传感器信息
+        if (!board.GetBoardName().empty()) {
+            std::cout << "    板卡名称: " << board.GetBoardName() << std::endl;
+        }
+        if (board.GetVoltage() > 0 || board.GetCurrent() > 0 || board.GetTemperature() > 0) {
+            std::cout << "    传感器: ";
+            bool hasSensor = false;
+            if (board.GetVoltage() > 0) {
+                std::cout << "电压 " << std::fixed << std::setprecision(2) << board.GetVoltage() << "V";
+                hasSensor = true;
+            }
+            if (board.GetCurrent() > 0) {
+                if (hasSensor) std::cout << ", ";
+                std::cout << "电流 " << std::setprecision(2) << board.GetCurrent() << "A";
+                hasSensor = true;
+            }
+            if (board.GetTemperature() > 0) {
+                if (hasSensor) std::cout << ", ";
+                std::cout << "温度 " << std::setprecision(1) << board.GetTemperature() << "°C";
+                hasSensor = true;
+            }
+            std::cout << std::endl;
+        }
+        
+        // 显示风扇信息
+        const auto& fanSpeeds = board.GetFanSpeeds();
+        if (!fanSpeeds.empty()) {
+            std::cout << "    风扇: ";
+            for (size_t j = 0; j < fanSpeeds.size(); ++j) {
+                if (j > 0) std::cout << ", ";
+                std::cout << fanSpeeds[j].fanName << " " 
+                          << std::fixed << std::setprecision(0) << fanSpeeds[j].speed << " RPM";
+            }
+            std::cout << std::endl;
+        }
+        
         // 如果有任务，显示任务详情
         if (!board.GetTasks().empty()) {
             for (const auto& task : board.GetTasks()) {
-                std::cout << "    └─ 任务ID: " << task.taskID 
-                          << ", 状态: " << task.taskStatus
-                          << ", 服务: " << task.serviceName << std::endl;
+                std::cout << "    任务: ID=" << task.taskID 
+                          << ", 状态=" << TaskStatusToString(task.taskStatus)
+                          << ", 服务=" << task.serviceName << std::endl;
             }
         }
     }
@@ -373,14 +410,57 @@ void CliService::PrintStackDetail(const std::string& stackUUID) {
                 for (const auto& taskPair : tasks) {
                     const auto& task = taskPair.second;
                     std::cout << "    └─ 任务ID: " << task.GetTaskID() 
-                              << ", 状态: " << task.GetTaskStatus()
+                              << ", 状态: " << TaskStatusToString(task.GetTaskStatus())
                               << ", 板卡: " << task.GetBoardAddress() << std::endl;
                     
                     // 显示资源使用情况
                     const auto& resources = task.GetResources();
-                    if (resources.cpuUsage > 0 || resources.memoryUsage > 0) {
-                        std::cout << "       CPU: " << std::fixed << std::setprecision(1) << resources.cpuUsage << "%"
-                                  << ", 内存: " << resources.memoryUsage << "%" << std::endl;
+                    
+                    // CPU信息
+                    if (resources.cpuCores > 0 || resources.cpuUsed > 0 || resources.cpuUsage > 0) {
+                        std::cout << "       CPU: ";
+                        if (resources.cpuCores > 0) {
+                            std::cout << std::fixed << std::setprecision(2) << resources.cpuUsed 
+                                      << "/" << resources.cpuCores << "核";
+                        }
+                        if (resources.cpuUsage > 0) {
+                            if (resources.cpuCores > 0) std::cout << ", ";
+                            std::cout << std::setprecision(1) << resources.cpuUsage << "%";
+                        }
+                        std::cout << std::endl;
+                    }
+                    
+                    // 内存信息
+                    if (resources.memorySize > 0 || resources.memoryUsed > 0 || resources.memoryUsage > 0) {
+                        std::cout << "       内存: ";
+                        if (resources.memorySize > 0) {
+                            std::cout << std::fixed << std::setprecision(2) << resources.memoryUsed 
+                                      << "/" << resources.memorySize << "MB";
+                        }
+                        if (resources.memoryUsage > 0) {
+                            if (resources.memorySize > 0) std::cout << ", ";
+                            std::cout << std::setprecision(1) << resources.memoryUsage << "%";
+                        }
+                        std::cout << std::endl;
+                    }
+                    
+                    // 网络信息
+                    if (resources.netReceive > 0 || resources.netSent > 0) {
+                        std::cout << "       网络: ";
+                        if (resources.netReceive > 0) {
+                            std::cout << "接收 " << std::fixed << std::setprecision(2) << resources.netReceive << "MB";
+                        }
+                        if (resources.netSent > 0) {
+                            if (resources.netReceive > 0) std::cout << ", ";
+                            std::cout << "发送 " << std::setprecision(2) << resources.netSent << "MB";
+                        }
+                        std::cout << std::endl;
+                    }
+                    
+                    // GPU信息
+                    if (resources.gpuMemUsed > 0) {
+                        std::cout << "       GPU显存: " << std::fixed << std::setprecision(2) 
+                                  << resources.gpuMemUsed << "MB" << std::endl;
                     }
                 }
             }
@@ -421,6 +501,21 @@ std::string CliService::ServiceStatusToString(int status) const {
     }
 }
 
+std::string CliService::TaskStatusToString(int status) const {
+    switch (status) {
+        case 1:
+            return "运行中";
+        case 2:
+            return "已完成";
+        case 3:
+            return "异常";
+        case 0:
+            return "其他";
+        default:
+            return "未知";
+    }
+}
+
 void CliService::DeployStacks(const std::vector<std::string>& labels) {
     if (!m_apiClient) {
         std::cout << "错误: API客户端未初始化" << std::endl;
@@ -434,7 +529,11 @@ void CliService::DeployStacks(const std::vector<std::string>& labels) {
     }
     std::cout << std::endl;
     
-    auto response = m_apiClient->DeployStacks(labels);
+    // 从配置读取账号密码
+    std::string account = app::infrastructure::ConfigManager::GetString("/api/account", "admin");
+    std::string password = app::infrastructure::ConfigManager::GetString("/api/password", "12q12w12ee");
+    
+    auto response = m_apiClient->DeployStacks(labels, account, password);
     
     std::cout << "\n部署结果:" << std::endl;
     PrintSeparator();

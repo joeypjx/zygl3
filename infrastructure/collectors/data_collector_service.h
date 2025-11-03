@@ -57,6 +57,11 @@ private:
      * @brief 采集业务链路信息并更新仓储
      */
     void CollectStackInfo();
+
+    /**
+     * @brief 发送IP心跳检测
+     */
+    void SendHeartbeat();
     
     /**
      * @brief 检查所有板卡的在线状态，将超时的板卡标记为离线

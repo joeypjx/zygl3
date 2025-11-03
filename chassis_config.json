@@ -1,0 +1,192 @@
+{
+  "_comment": "机箱配置文件 - 定义系统中所有机箱和板卡的配置信息",
+  "topology": {
+    "chassis": [
+      {
+        "chassisNumber": 1,
+        "chassisName": "Chassis_1",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.101", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.102", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.103", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.104", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.105", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.106", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.107", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.108", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.109", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.110", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.111", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.112", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.113", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.114", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 2,
+        "chassisName": "Chassis_2",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.201", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.202", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.203", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.204", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.205", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.206", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.207", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.208", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.209", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.210", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.211", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.212", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.213", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.214", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 3,
+        "chassisName": "Chassis_3",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.301", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.302", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.303", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.304", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.305", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.306", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.307", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.308", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.309", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.310", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.311", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.312", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.313", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.314", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 4,
+        "chassisName": "Chassis_4",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.401", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.402", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.403", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.404", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.405", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.406", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.407", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.408", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.409", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.410", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.411", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.412", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.413", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.414", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 5,
+        "chassisName": "Chassis_5",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.501", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.502", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.503", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.504", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.505", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.506", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.507", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.508", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.509", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.510", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.511", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.512", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.513", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.514", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 6,
+        "chassisName": "Chassis_6",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.601", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.602", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.603", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.604", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.605", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.606", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.607", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.608", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.609", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.610", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.611", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.612", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.613", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.614", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 7,
+        "chassisName": "Chassis_7",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.701", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.702", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.703", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.704", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.705", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.706", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.707", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.708", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.709", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.710", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.711", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.712", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.713", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.714", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 8,
+        "chassisName": "Chassis_8",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.801", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.802", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.803", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.804", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.805", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.806", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.807", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.808", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.809", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.810", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.811", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.812", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.813", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.814", "boardType": 2 }
+        ]
+      },
+      {
+        "chassisNumber": 9,
+        "chassisName": "Chassis_9",
+        "boards": [
+          { "boardNumber": 1, "boardAddress": "192.168.0.901", "boardType": 0 },
+          { "boardNumber": 2, "boardAddress": "192.168.0.902", "boardType": 0 },
+          { "boardNumber": 3, "boardAddress": "192.168.0.903", "boardType": 0 },
+          { "boardNumber": 4, "boardAddress": "192.168.0.904", "boardType": 0 },
+          { "boardNumber": 5, "boardAddress": "192.168.0.905", "boardType": 0 },
+          { "boardNumber": 6, "boardAddress": "192.168.0.906", "boardType": 1 },
+          { "boardNumber": 7, "boardAddress": "192.168.0.907", "boardType": 1 },
+          { "boardNumber": 8, "boardAddress": "192.168.0.908", "boardType": 0 },
+          { "boardNumber": 9, "boardAddress": "192.168.0.909", "boardType": 0 },
+          { "boardNumber": 10, "boardAddress": "192.168.0.910", "boardType": 0 },
+          { "boardNumber": 11, "boardAddress": "192.168.0.911", "boardType": 0 },
+          { "boardNumber": 12, "boardAddress": "192.168.0.912", "boardType": 0 },
+          { "boardNumber": 13, "boardAddress": "192.168.0.913", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.0.914", "boardType": 2 }
+        ]
+      }
+    ]
+  },
+  "_note": {
+    "boardType": "0=计算板卡, 1=交换板卡, 2=电源板卡",
+    "ipPattern": "机箱号*100 + 槽位号，例如机箱1槽位1 = 192.168.0.101"
+  }
+}
+

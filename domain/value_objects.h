@@ -29,11 +29,13 @@ enum class BoardOperationalStatus : int8_t {
  */
 struct TaskStatusInfo {
     std::string taskID;         // 任务ID
-    std::string taskStatus;    // 任务状态
+    int taskStatus;            // 任务状态：1-运行中，2-已完成，3-异常，0-其他
     std::string serviceName;   // 算法组件名称
     std::string serviceUUID;   // 算法组件唯一标识
     std::string stackName;     // 业务链路名称
     std::string stackUUID;     // 业务链路唯一标识
+    
+    TaskStatusInfo() : taskStatus(0) {}
 };
 
 /**
@@ -60,6 +62,16 @@ struct LocationInfo {
     std::string boardName;      // 板卡名称
     int boardNumber = 0;        // 板卡槽位号
     std::string boardAddress;   // 板卡IP地址
+};
+
+/**
+ * @brief 风扇信息
+ */
+struct FanSpeed {
+    std::string fanName;  // 风扇名称
+    float speed;          // 风扇转速
+    
+    FanSpeed() : speed(0.0f) {}
 };
 
 }

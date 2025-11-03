@@ -11,7 +11,9 @@
       "heartbeat": "/api/v1/sys-config/client/up"
     },
     "timeout": 30,
-    "retry_count": 3
+    "retry_count": 3,
+    "account": "admin",
+    "password": "12q12w12ee"
   },
   "heartbeat": {
     "client_ip": "192.168.6.222"

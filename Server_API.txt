@@ -3,12 +3,12 @@
 1.1需求描述
 获取所有板卡信息和状态，板卡信息包括板卡所属机箱号、槽位号、IP地址、板卡类型等信息，板卡状态包括板卡运行状态以及板卡上正在运行的组件任务信息（包括组件任务ID、运行状态、该任务属于哪个组件、哪个业务链路等）。
 1.2 接口基本信息
-接口名称：获取所有板卡信息和状态
-请求方式：GET
-请求地址：http://api/v1/external/qyw/boardinfo
-Content-Type：application/json
-认证方式：Bearer Token（待定）
-响应格式：JSON
+接口名称：获取所有板卡信息和状态
+请求方式：GET
+请求地址：http://api/v1/external/qyw/boardinfo
+Content-Type：application/json
+认证方式：Bearer Token（待定）
+响应格式：JSON
 1.3请求头（Headers）
 参数名	必填	示例值	说明
 Content-Type	是	Application/json	声明请求体为json
@@ -21,15 +21,22 @@ Content-Type	是	Application/json	声明请求体为json
 {
             "chassisName": "string",    机箱名称
             "chassisNumber": 0,       机箱号
-            "boardNmae": "string" ,    板卡名称
+            "boardName": "string" ,    板卡名称
             "boardNumber": 0,        板卡槽位号
             "boardType": 0,           板卡类型
             "boardAddress":"string" ,   板卡ip地址
             "boardStatus":0 ,          板卡状态，0-正常，1-异常
+            "voltage":                电压
+            "current":                电流
+            "temperature":            温度
+            "fanSpeeds": [ 			风扇信息
+				"fanName":			风扇名称
+				"speed":			    风扇转速
+			 ]
             "taskInfos":[
                {
 "taskID":"string"             任务id
-"taskStatus":"string"          任务状态
+"taskStatus":1     任务状态，1 运行中 2 已完成 3 异常 0其他
 "serviceName":"string"        算法组件名称
 "serviceUUID":"string"        算法组件唯一标识
 "stackName":"string"         业务链路名称
@@ -40,22 +47,32 @@ Content-Type	是	Application/json	声明请求体为json
 ]
 }
 
+
 二、批量启用业务链路
 1.1需求描述
 启动业务链路，传入业务链路标签UUID，一次性启动所有含有该标签的当前版本业务链路。
 1.2 接口基本信息
-接口名称：获根据业务链路标签批量启用业务链路
-请求方式：POST
-请求地址：http://api/v1/external/qyw/deploy
-Content-Type：application/json
-认证方式：Bearer Token（待定）
-响应格式：JSON
-1.3请求体（Body）
+接口名称：获根据业务链路标签批量启用业务链路
+请求方式：POST
+请求地址：http://api/v1/stacks/labels/deploy
+Content-Type：application/json
+响应格式：JSON
+// 目前三种模式
+工作模式一，工作模式二
+1.3请求体（Body）-- 最外层为json格式
 参数名	必填	示例值	说明
 stackLabels	是	[
 "label1",
 "label2"
-]	字符串类型列表
+]
+字符串类型列表
+stop	否	0
+1先停止其他业务再启动本服务
+0 启动服务，不排他
+account	是	admin
+用户账号
+password	是	12q12w12ee
+密码
 1.4 响应体
 成功响应：
 {
@@ -86,18 +103,18 @@ stackLabels	是	[
 1.1需求描述
 停用业务链路，传入业务链路标签UUID，一次性停用所有含有该标签的当前版本业务链路。
 1.2 接口基本信息
-接口名称：根据业务链路标签批量停用业务链路
-请求方式：POST
-请求地址：http://api/v1/external/qyw/undeploy
-Content-Type：application/json
-认证方式：Bearer Token（待定）
-响应格式：JSON
-1.3请求体（Body）
+接口名称：根据业务链路标签批量停用业务链路
+请求方式：POST
+请求地址：http://api/v1/stacks/labels/undeploy
+Content-Type：application/json
+响应格式：JSON
+1.3请求体（Body）-- 最外层为json格式
 参数名	必填	示例值	说明
 stackLabels	是	[
 "label1",
 "label2"
-]	字符串类型列表
+]
+字符串类型列表
 1.4 响应体
 成功响应：
 {
@@ -128,12 +145,12 @@ stackLabels	是	[
 1.1需求描述
 获取所有业务链路信息及其组件的运行状态，包括所有业务链路基本信息和启动状态，业务链路中所有组件信息（组件ID、组件名、任务ID、所属业务链路ID等），运行状态（包括运行在哪个板卡上，给出板卡的机箱号、槽位号、IP地址等），以及组件任务的资源使用情况（包括CPU使用率、内存使用量、内存最大可用量、内存占用率、网络收发流量、GPU显存使用情况等）
 1.2 接口基本信息
-接口名称：获取所有板卡信息和状态
-请求方式：GET
-请求地址：http://api/v1/external/qyw/stackinfo
-Content-Type：application/json
-认证方式：Bearer Token（待定）
-响应格式：JSON
+接口名称：获取所有业务链路信息和状态
+请求方式：POST
+请求地址：http://api/v1/external/qyw/stackinfo
+Content-Type：application/json
+认证方式：Bearer Token（待定）
+响应格式：JSON
 1.3请求头（Headers）
 参数名	必填	示例值	说明
 Content-Type	是	Application/json	声明请求体为json
@@ -164,8 +181,7 @@ Content-Type	是	Application/json	声明请求体为json
                 "taskInfos":[
                      {
 "taskID":"string"，             任务id
-"taskStatus":"string"，          任务状态
-"taskStatus":"string"，          任务状态
+"taskStatus":1， 任务状态，1 运行中 2 已完成 3 异常 0其他
 "cpuCores":float，             cpu总量
 "cpuUsed":float，              cpu使用量
 "cpuUsage":float，             cpu使用率
@@ -177,7 +193,7 @@ Content-Type	是	Application/json	声明请求体为json
 "gpuMemUsed":float，         gpu显存使用情况
 "chassisName": "string",         机箱名称
 "chassisNumber": 0,            机箱号
-"boardNmae": "string" ,         板卡名称
+"boardName": "string" ,         板卡名称
                         "boardNumber": 0,             板卡槽位号
                         "boardAddress":"string" ,        板卡ip地址
 }
@@ -191,18 +207,18 @@ Content-Type	是	Application/json	声明请求体为json
 1.1需求描述
 当板卡状态异常（比如离线时），主动发送告警信息，上报异常板卡所属机箱号、槽位号、IP地址、板卡类型等。
 1.2 接口基本信息
-接口名称：获取所有板卡信息和状态
-请求方式：POST
-请求地址：715内部接口
-Content-Type：application/json
-响应格式：JSON
+接口名称：获取所有板卡信息和状态
+请求方式：POST
+请求地址：715内部接口
+Content-Type：application/json
+响应格式：JSON
 1.3 请求体（Body） --- json 格式
 字段名	类型	必填	说明	示例值
 请求示例：
 {
             "chassisName": "string",    机箱名称
             "chassisNumber": 0,       机箱号
-            "boardNmae": "string" ,    板卡名称
+            "boardName": "string" ,    板卡名称
             "boardNumber": 0,        板卡槽位号
             "boardType": 0,           板卡类型
             "boardAddress":"string" ,   板卡ip地址
@@ -224,11 +240,11 @@ Content-Type	是	Application/json	声明请求体为json
 1.1需求描述
 当组件运行异常时，主动发送告警信息，上报异常组件任务ID、运行状态、该任务属于哪个组件、哪个业务链路，当前运行在哪个板卡上（给出板卡的机箱号、槽位号、IP地址等）
 1.2 接口基本信息
-接口名称：获取所有板卡信息和状态
-请求方式：POST
-请求地址：715内部接口
-Content-Type：application/json
-响应格式：JSON
+接口名称：获取所有板卡信息和状态
+请求方式：POST
+请求地址：715内部接口
+Content-Type：application/json
+响应格式：JSON
 1.3 请求体（Body） --- json 格式
 字段名	类型	必填	说明	示例值
 请求示例：
@@ -239,10 +255,10 @@ Content-Type	是	Application/json	声明请求体为json
             "serviceUUID": "string",    算法组件UUID
 "taskAlertInfos":[
              "taskID":"string"          任务id
-"taskStatus":"string"       任务状态
+"taskStatus":1   任务状态1 运行中 2 已完成 3 异常 0其他
                          "chassisName": "string",    机箱名称
                          "chassisNumber": 0,       机箱号
-                         "boardNmae": "string" ,    板卡名称
+                         "boardName": "string" ,    板卡名称
                          "boardNumber": 0,        板卡槽位号
                          "boardType": 0,           板卡类型
                          "boardAddress":"string" ,   板卡ip地址
@@ -262,19 +278,21 @@ Content-Type	是	Application/json	声明请求体为json
 }
 
 
-七、心跳保活
-1.1 需求描述
-通过该接口，周期性发送心跳包，并在心跳包中包括接口调用者的IP地址
-1.2 请求地址
-接口名称：心跳保活
-请求方式：GET
-请求地址：http://api/v1/sys-config/client/up
-Content-Type：application/json
-认证方式：Bearer Token（待定）
-响应格式：JSON
-1.3 请求参数
-clientIp String 接口调用者的IP地址 如 192.168.6.222
-示例：http://api/v1/sys-config/client/up?clientIp=192.168.6.222
+七、IP心跳检测接口
+1.1需求描述
+客户端上报客户端IP地址，软件框架会用这个IP地址调用客户端接口推送异常信息。
+1.2 接口基本信息
+接口名称：IP心跳检测
+请求方式：GET
+请求地址：715内部接口
+响应格式：JSON
+1.3 请求参数parameter --- Url参数格式
+字段名	类型	必填	说明	示例值
+clientIp	String	是	客户端IP地址	192.168.6.222
+请求示例：
+http://{IP}:{PORT}/api/v1/sys-config/client/up?clientIp=192.168.9.3
+现场开发环境调用地址是：
+http://192.168.6.37:18080/api/v1/sys-config/client/up?clientIp=192.168.6.37
 1.4 响应体
 成功响应：
 {
@@ -283,3 +301,31 @@ clientIp String 接口调用者的IP地址 如 192.168.6.222
   "data": "success"
 }
 
+
+八、业务链路复位接口
+1.1需求描述
+停止当前所有业务链路。
+1.2 接口基本信息
+接口名称：业务链路复位接口
+请求方式：GET
+请求地址：http://api/v1/stacks/labels/reset
+响应格式：JSON
+1.3 请求参数
+无
+1.4 响应体
+成功响应：
+{
+  "code": 0,
+  "message": "success",
+  "data": "success"
+}
+
+备注：
+文档中板卡类型：
+1、CPU通用计算模块A型
+2、CPU通用计算模块B型
+3、GPU I型高性能计算模块
+4、GPU II型高性能计算模块
+5、综合计算模块A型
+6、综合计算模块B型
+0、其他

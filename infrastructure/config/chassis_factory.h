@@ -3,9 +3,12 @@
 #include "domain/chassis.h"
 #include "domain/board.h"
 #include "domain/value_objects.h"
+#include "config_manager.h"
 #include <memory>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iostream>
 
 namespace app::infrastructure {
 
@@ -99,11 +102,121 @@ public:
     }
 
     /**
+     * @brief 从配置文件读取机箱配置
+     * @param configPath 配置文件路径（可选，如果为空则从ConfigManager读取）
+     * @return 机箱配置列表，如果配置文件不存在或无效则返回空列表
+     */
+    static std::vector<ChassisConfig> LoadConfigsFromFile(const std::string& configPath = "") {
+        std::vector<ChassisConfig> configs;
+        
+        try {
+            nlohmann::json configJson;
+            const nlohmann::json* chassisArray = nullptr;
+            
+            // 如果提供了文件路径，尝试从单独的文件读取
+            if (!configPath.empty()) {
+                std::ifstream file(configPath);
+                if (file.is_open()) {
+                    file >> configJson;
+                    file.close();
+                    
+                    // 支持两种格式：直接是数组，或者包含在topology.chassis中
+                    if (configJson.is_array()) {
+                        chassisArray = &configJson;
+                    } else if (configJson.contains("topology") && 
+                               configJson["topology"].contains("chassis") &&
+                               configJson["topology"]["chassis"].is_array()) {
+                        chassisArray = &configJson["topology"]["chassis"];
+                    }
+                } else {
+                    // 文件不存在，返回空列表
+                    return configs;
+                }
+            } else {
+                // 从ConfigManager读取（从config.json中的/topology/chassis）
+                chassisArray = ConfigManager::TryGet("/topology/chassis");
+            }
+            
+            // 解析配置
+            if (chassisArray != nullptr && chassisArray->is_array()) {
+                for (const auto& chassisJson : *chassisArray) {
+                    ChassisConfig chassisConfig;
+                    
+                    // 读取机箱基本信息
+                    chassisConfig.chassisNumber = chassisJson.value("chassisNumber", 0);
+                    chassisConfig.chassisName = chassisJson.value("chassisName", "");
+                    
+                    // 读取板卡配置
+                    if (chassisJson.contains("boards") && chassisJson["boards"].is_array()) {
+                        for (const auto& boardJson : chassisJson["boards"]) {
+                            BoardConfig boardConfig;
+                            boardConfig.boardNumber = boardJson.value("boardNumber", 0);
+                            boardConfig.boardAddress = boardJson.value("boardAddress", "");
+                            
+                            // 读取板卡类型（0-计算，1-交换，2-电源）
+                            int boardTypeInt = boardJson.value("boardType", 0);
+                            if (boardTypeInt == 1) {
+                                boardConfig.boardType = app::domain::BoardType::Switch;
+                            } else if (boardTypeInt == 2) {
+                                boardConfig.boardType = app::domain::BoardType::Power;
+                            } else {
+                                boardConfig.boardType = app::domain::BoardType::Computing;
+                            }
+                            
+                            chassisConfig.boards.push_back(boardConfig);
+                        }
+                    }
+                    
+                    configs.push_back(chassisConfig);
+                }
+            }
+        } catch (const std::exception& e) {
+            // 解析失败，返回空列表
+            return configs;
+        }
+        
+        return configs;
+    }
+
+    /**
      * @brief 创建默认配置（用于测试或初始化）
-     * @detail 创建9个机箱，每个机箱14块板卡的默认配置
+     * @detail 优先从配置文件读取，如果配置文件不存在或无效，则使用硬编码的默认配置
+     * @param configFilePath 可选的单独配置文件路径（如 "chassis_config.json"）
+     * @return 机箱配置列表
+     */
+    static std::vector<ChassisConfig> CreateDefaultConfigs(const std::string& configFilePath = "") {
+        // 1. 优先尝试从指定配置文件读取
+        if (!configFilePath.empty()) {
+            auto configs = LoadConfigsFromFile(configFilePath);
+            if (!configs.empty()) {
+                std::cout << "[配置加载] 从文件加载机箱配置: " << configFilePath 
+                          << " (共 " << configs.size() << " 个机箱)" << std::endl;
+                return configs;
+            } else {
+                std::cout << "[配置加载] 无法从文件加载配置: " << configFilePath 
+                          << "，尝试其他配置源..." << std::endl;
+            }
+        }
+        
+        // 2. 尝试从ConfigManager读取（从config.json中的/topology/chassis）
+        auto configs = LoadConfigsFromFile("");
+        if (!configs.empty()) {
+            std::cout << "[配置加载] 从config.json加载机箱配置" 
+                      << " (共 " << configs.size() << " 个机箱)" << std::endl;
+            return configs;
+        }
+        
+        // 3. 如果配置文件不存在或无效，使用硬编码的默认配置
+        std::cout << "[配置加载] 使用硬编码默认配置" << std::endl;
+        return CreateHardcodedConfigs();
+    }
+
+private:
+    /**
+     * @brief 创建硬编码的默认配置（原来的实现）
      * @return 9个机箱的配置列表
      */
-    static std::vector<ChassisConfig> CreateDefaultConfigs() {
+    static std::vector<ChassisConfig> CreateHardcodedConfigs() {
         std::vector<ChassisConfig> configs;
         configs.reserve(9);
         
@@ -134,6 +247,8 @@ public:
         
         return configs;
     }
+
+public:
 };
 
 }

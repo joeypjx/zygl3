@@ -33,7 +33,7 @@ struct BoardAlertRequest {
  */
 struct TaskAlertInfo {
     std::string taskID;
-    std::string taskStatus;
+    int taskStatus;  // 1-运行中，2-已完成，3-异常，0-其他
     std::string chassisName;
     int chassisNumber;
     std::string boardName;
@@ -43,7 +43,7 @@ struct TaskAlertInfo {
     int boardStatus;  // 0-正常, 1-异常
     std::vector<std::string> alertMessages;
     
-    TaskAlertInfo() : chassisNumber(0), boardNumber(0), boardType(0), boardStatus(0) {}
+    TaskAlertInfo() : taskStatus(0), chassisNumber(0), boardNumber(0), boardType(0), boardStatus(0) {}
 };
 
 /**
