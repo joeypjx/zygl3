@@ -1,6 +1,0 @@
-1 add update time in model
-2 according to update time to change model status
-3 add alert send and netReceive
-
-
-给软件添加cli功能，在命令行通过交互输入指令，可打印机箱全量信息、业务信息、指定任务信息、启动指定标签的业务、停止当前业务

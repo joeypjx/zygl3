@@ -31,6 +31,7 @@
 
 ## 系统架构
 
+### DDD分层架构
 ```
 ┌─────────────────────────────────────────────┐
 │              Domain Layer                   │
@@ -53,6 +54,16 @@
 │  - ResourceMonitorListener (UDP)           │
 └─────────────────────────────────────────────┘
 ```
+
+### 功能单元划分
+系统按功能划分为6个核心单元，详见 [单元架构文档](docs/UNIT_ARCHITECTURE.md)：
+
+1. **资源采集单元** - 板卡和机箱数据采集
+2. **资源数据存取单元** - 机箱和板卡数据存储
+3. **业务采集单元** - 业务链路数据采集
+4. **业务数据存取单元** - 业务链路数据存储
+5. **前端组播交互单元** - UDP组播通信基础设施
+6. **命令处理和数据组合单元** - 命令处理和数据格式转换
 
 ## 构建系统
 
@@ -129,10 +140,13 @@ zygl3/
 │       └── resource_monitor_broadcaster.cpp
 ├── main.cpp                          # 主程序
 ├── CMakeLists.txt                    # CMake配置
-├── Server_API.txt                    # API文档
-├── UDP.txt                           # UDP协议文档
+├── docs/
+│   ├── UNIT_ARCHITECTURE.md         # 单元架构划分文档
+│   ├── TEST_CASES.md                 # 单元测试用例设计文档
+│   ├── Server_API.txt                # API接口文档
+│   ├── UDP.txt                       # UDP协议文档
+│   └── Dialog.txt                    # 设计讨论文档
 └── README.md                         # 本文件
-```
 
 ## 工作流程
 

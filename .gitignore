@@ -1,6 +1,11 @@
 # 构建目录
 build/
 cmake-build-*/
+tests/build/
+third_party/googletest/build/
+
+# 第三方库源码（通过脚本下载，不需要提交）
+third_party/googletest/
 
 # IDE
 .vscode/
