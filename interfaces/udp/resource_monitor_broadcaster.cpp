@@ -54,9 +54,9 @@ void ResourceMonitorBroadcaster::Start() {
               << ":" << m_port << ")" << std::endl;
 }
 
-void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitor, uint16_t taskQueryResp, 
+void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
                                              uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport) {
-    m_cmdResourceMonitor = resourceMonitor;
+    m_cmdResourceMonitorResp = resourceMonitorResp;
     m_cmdTaskQueryResp = taskQueryResp;
     m_cmdTaskStartResp = taskStartResp;
     m_cmdTaskStopResp = taskStopResp;
@@ -81,7 +81,7 @@ bool ResourceMonitorBroadcaster::SendResponse(uint32_t requestId) {
     memset(response.header, 0, 22);
     
     // 设置命令码
-    response.command = m_cmdResourceMonitor;
+    response.command = m_cmdResourceMonitorResp;
     
     // 设置响应ID
     response.responseId = m_nextResponseId++;

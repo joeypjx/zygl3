@@ -23,7 +23,7 @@ struct ResourceMonitorRequest {
 
 struct ResourceMonitorResponse {
     char header[22];           // 报文头部 (22字节)
-    uint16_t command;          // 命令码 F000H (2字节)
+    uint16_t command;          // 命令码 F100H (2字节)
     uint32_t responseId;        // 响应ID (4字节)
     uint8_t boardStatus[108];   // 机箱板卡状态 (108字节 = 9机箱×12板卡)
     uint8_t taskStatus[864];    // 任务状态 (864字节 = 9机箱×12板卡×8任务)
@@ -170,7 +170,7 @@ public:
     bool SendFaultReport(const std::string& faultDescription);
     
     // 设置UDP命令码（从配置读取）
-    void SetCommand(uint16_t resourceMonitor, uint16_t taskQueryResp, 
+    void SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
                     uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport);
 
 private:
@@ -236,7 +236,7 @@ private:
     std::mutex m_labelMutex;
     
     // UDP命令码
-    uint16_t m_cmdResourceMonitor = 0xF000;
+    uint16_t m_cmdResourceMonitorResp = 0xF100;  // 资源监控响应命令码
     uint16_t m_cmdTaskQueryResp = 0xF105;
     uint16_t m_cmdTaskStartResp = 0xF103;
     uint16_t m_cmdTaskStopResp = 0xF104;

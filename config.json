@@ -28,6 +28,7 @@
     },
     "commands": {
       "resource_monitor": "0xF000",
+      "resource_monitor_resp": "0xF100",
       "task_start": "0xF003",
       "task_stop": "0xF004",
       "task_query": "0xF005",

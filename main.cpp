@@ -64,7 +64,7 @@ int main() {
     
     // 设置UDP广播器命令码
     broadcaster->SetCommand(
-        ConfigManager::GetHexUint16("/udp/commands/resource_monitor", 0xF000),
+        ConfigManager::GetHexUint16("/udp/commands/resource_monitor_resp", 0xF100),
         ConfigManager::GetHexUint16("/udp/commands/task_query_resp", 0xF105),
         ConfigManager::GetHexUint16("/udp/commands/task_start_resp", 0xF103),
         ConfigManager::GetHexUint16("/udp/commands/task_stop_resp", 0xF104),
