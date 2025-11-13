@@ -10,6 +10,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <cerrno>
+#include <cstdlib>
 
 namespace app::interfaces {
 
@@ -27,7 +28,8 @@ ResourceMonitorBroadcaster::ResourceMonitorBroadcaster(
     , m_port(port)
     , m_socket(-1)
     , m_running(false)
-    , m_nextResponseId(0) {
+    , m_nextResponseId(0)
+    , m_chassisController(std::make_unique<ChassisController>()) {
 
     // 初始化socket
     m_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -55,11 +57,13 @@ void ResourceMonitorBroadcaster::Start() {
 }
 
 void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
-                                             uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport) {
+                                             uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport) {
     m_cmdResourceMonitorResp = resourceMonitorResp;
     m_cmdTaskQueryResp = taskQueryResp;
     m_cmdTaskStartResp = taskStartResp;
     m_cmdTaskStopResp = taskStopResp;
+    m_cmdChassisResetResp = chassisResetResp;
+    m_cmdChassisSelfCheckResp = chassisSelfCheckResp;
     m_cmdFaultReport = faultReport;
 }
 
@@ -512,6 +516,205 @@ std::string ResourceMonitorBroadcaster::WorkModeToLabel(uint16_t workMode) {
     return "模式" + std::to_string(workMode);
 }
 
+bool ResourceMonitorBroadcaster::HandleChassisResetRequest(const ChassisResetRequest& request) {
+    if (m_socket < 0) {
+        return false;
+    }
+
+    // 构建响应报文
+    ChassisResetResponse response;
+    memset(&response, 0, sizeof(response));
+
+    // 设置头部
+    memset(response.header, 0, 22);
+
+    // 设置命令码
+    response.command = m_cmdChassisResetResp;
+
+    // 设置响应ID
+    response.responseId = m_nextResponseId++;
+
+    // 构建复位响应数据
+    BuildChassisResetResponse(response, request);
+
+    // 设置发送地址
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(m_port);
+    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
+
+    // 发送组播数据包
+    int result = sendto(m_socket, &response, sizeof(response), 0,
+                        (struct sockaddr*)&addr, sizeof(addr));
+
+    if (result > 0) {
+        std::cout << "发送机箱复位响应: (响应ID=" << response.responseId << ")" << std::endl;
+        return true;
+    }
+
+    std::cerr << "发送机箱复位响应失败: " << strerror(errno) << std::endl;
+    return false;
+}
+
+bool ResourceMonitorBroadcaster::HandleChassisSelfCheckRequest(const ChassisSelfCheckRequest& request) {
+    if (m_socket < 0) {
+        return false;
+    }
+
+    // 构建响应报文
+    ChassisSelfCheckResponse response;
+    memset(&response, 0, sizeof(response));
+
+    // 设置头部
+    memset(response.header, 0, 22);
+
+    // 设置命令码
+    response.command = m_cmdChassisSelfCheckResp;
+
+    // 设置响应ID
+    response.responseId = m_nextResponseId++;
+
+    // 设置机箱号
+    response.chassisNumber = request.chassisNumber;
+
+    // 构建自检响应数据
+    BuildChassisSelfCheckResponse(response, request);
+
+    // 设置发送地址
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(m_port);
+    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
+
+    // 发送组播数据包
+    int result = sendto(m_socket, &response, sizeof(response), 0,
+                        (struct sockaddr*)&addr, sizeof(addr));
+
+    if (result > 0) {
+        std::cout << "发送机箱自检响应: 机箱" << response.chassisNumber 
+                  << " (响应ID=" << response.responseId << ")" << std::endl;
+        return true;
+    }
+
+    std::cerr << "发送机箱自检响应失败: " << strerror(errno) << std::endl;
+    return false;
+}
+
+void ResourceMonitorBroadcaster::BuildChassisSelfCheckResponse(ChassisSelfCheckResponse& response, const ChassisSelfCheckRequest& request) {
+    // 初始化所有结果为失败（1）
+    memset(response.checkResults, 1, sizeof(response.checkResults));
+
+    // 根据机箱号获取机箱
+    auto chassis = m_chassisRepo->FindByNumber(request.chassisNumber);
+    if (!chassis) {
+        std::cerr << "未找到机箱: " << request.chassisNumber << std::endl;
+        return;
+    }
+
+    const auto& boards = chassis->GetAllBoards();
+
+    // 遍历12块板卡
+    for (int boardIdx = 0; boardIdx < 12; ++boardIdx) {
+        // 检查是否需要自检该板卡（0：自检，1：不需自检）
+        if (request.checkFlags[boardIdx] == 0) {
+            // 需要自检
+            if (boardIdx < static_cast<int>(boards.size())) {
+                const auto& board = boards[boardIdx];
+                std::string boardIp = board.GetAddress();
+                
+                if (!boardIp.empty()) {
+                    std::cout << "自检机箱" << request.chassisNumber << " 板卡" << (boardIdx + 1) 
+                              << " (IP: " << boardIp << ")" << std::endl;
+                    
+                    // Ping板卡IP
+                    if (PingBoard(boardIp)) {
+                        response.checkResults[boardIdx] = 0;  // 自检成功
+                    } else {
+                        response.checkResults[boardIdx] = 1;  // 自检失败
+                    }
+                } else {
+                    response.checkResults[boardIdx] = 1;  // IP地址为空，自检失败
+                }
+            } else {
+                response.checkResults[boardIdx] = 1;  // 板卡不存在，自检失败
+            }
+        } else {
+            // 不需自检，保持为1（没有自检）
+            response.checkResults[boardIdx] = 1;
+        }
+    }
+}
+
+bool ResourceMonitorBroadcaster::PingBoard(const std::string& ipAddress) {
+    // 使用 ping 命令检查连通性
+    // ping -c 1 -W 1 IP地址，-c 1表示只ping一次，-W 1表示超时1秒
+    std::string pingCommand = "ping -c 1 -W 1 " + ipAddress + " > /dev/null 2>&1";
+    int result = std::system(pingCommand.c_str());
+    
+    // ping 成功返回0，失败返回非0
+    return (result == 0);
+}
+
+void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse& response, const ChassisResetRequest& request) {
+    // 初始化所有结果为失败（1）
+    memset(response.resetResults, 1, sizeof(response.resetResults));
+
+    // 获取所有机箱
+    auto allChassis = m_chassisRepo->GetAll();
+
+    // 遍历9个机箱
+    for (size_t chassisIdx = 0; chassisIdx < allChassis.size() && chassisIdx < 9; ++chassisIdx) {
+        const auto& chassis = allChassis[chassisIdx];
+        int chassisNumber = chassis->GetChassisNumber();
+        
+        // 获取机箱IP地址（使用第7块板卡的IP地址作为机箱IP）
+        // 如果第7块板卡不存在，则使用默认格式
+        std::string chassisIp;
+        const auto& boards = chassis->GetAllBoards();
+        if (boards.size() >= 7 && !boards[6].GetAddress().empty()) {
+            // 从第7块板卡的IP地址提取机箱IP（假设格式为 192.168.x.y，取前三个段）
+            std::string seventhBoardIp = boards[6].GetAddress();
+            size_t lastDot = seventhBoardIp.find_last_of('.');
+            if (lastDot != std::string::npos) {
+                chassisIp = seventhBoardIp.substr(0, lastDot) + ".1";
+            } else {
+                chassisIp = "192.168." + std::to_string(chassisNumber) + ".1";
+            }
+        } else {
+            chassisIp = "192.168." + std::to_string(chassisNumber) + ".1";
+        }
+        
+        // 遍历12块板卡
+        for (int boardIdx = 0; boardIdx < 12; ++boardIdx) {
+            size_t flagIndex = chassisIdx * 12 + boardIdx;
+            
+            // 检查是否需要复位该板卡
+            if (request.resetFlags[flagIndex] == 1) {
+                // 需要复位，调用 ChassisController
+                std::vector<int> slotNumbers;
+                slotNumbers.push_back(boardIdx + 1);  // 槽位号从1开始
+                
+                std::cout << "复位机箱" << chassisNumber << " 板卡" << (boardIdx + 1) << " (IP: " << chassisIp << ")" << std::endl;
+                auto resetResult = m_chassisController->resetChassisBoards(
+                    chassisIp, slotNumbers, request.requestId);
+                
+                // 根据复位结果设置响应
+                // 0：复位成功，1：没有复位或复位失败
+                if (resetResult.result == ChassisController::OperationResult::SUCCESS) {
+                    response.resetResults[flagIndex] = 0;  // 复位成功
+                } else {
+                    response.resetResults[flagIndex] = 1;  // 复位失败
+                }
+            } else {
+                // 不需要复位，保持为1（没有复位）
+                response.resetResults[flagIndex] = 1;
+            }
+        }
+    }
+}
+
 bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescription) {
     if (m_socket < 0) {
         std::cerr << "发送故障上报失败: socket未初始化" << std::endl;
@@ -641,11 +844,13 @@ void ResourceMonitorListener::Stop() {
 }
 
 void ResourceMonitorListener::SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
-                                          uint16_t taskStart, uint16_t taskStop) {
+                                          uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck) {
     m_cmdResourceMonitor = resourceMonitor;
     m_cmdTaskQuery = taskQuery;
     m_cmdTaskStart = taskStart;
     m_cmdTaskStop = taskStop;
+    m_cmdChassisReset = chassisReset;
+    m_cmdChassisSelfCheck = chassisSelfCheck;
 }
 
 void ResourceMonitorListener::ListenLoop() {
@@ -709,6 +914,27 @@ void ResourceMonitorListener::ListenLoop() {
                     // 发送任务停止响应
                     if (m_broadcaster) {
                         m_broadcaster->HandleTaskStopRequest(*request);
+                    }
+                }
+                else if (command == m_cmdChassisReset && recvLen >= sizeof(ChassisResetRequest)) {
+                    // 机箱复位请求
+                    ChassisResetRequest* request = (ChassisResetRequest*)buffer;
+                    std::cout << "收到机箱复位请求: (请求ID=" << request->requestId << ")" << std::endl;
+
+                    // 发送机箱复位响应
+                    if (m_broadcaster) {
+                        m_broadcaster->HandleChassisResetRequest(*request);
+                    }
+                }
+                else if (command == m_cmdChassisSelfCheck && recvLen >= sizeof(ChassisSelfCheckRequest)) {
+                    // 机箱自检请求
+                    ChassisSelfCheckRequest* request = (ChassisSelfCheckRequest*)buffer;
+                    std::cout << "收到机箱自检请求: 机箱" << request->chassisNumber 
+                              << " (请求ID=" << request->requestId << ")" << std::endl;
+
+                    // 发送机箱自检响应
+                    if (m_broadcaster) {
+                        m_broadcaster->HandleChassisSelfCheckRequest(*request);
                     }
                 }
             }
