@@ -5,7 +5,7 @@ tests/build/
 third_party/googletest/build/
 
 # 第三方库源码（通过脚本下载，不需要提交）
-third_party/googletest/
+# third_party/googletest/  # 已注释：允许提交 googletest 源码
 
 # IDE
 .vscode/

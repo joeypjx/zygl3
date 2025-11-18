@@ -111,8 +111,53 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
             m_broadcaster->SendFaultReport(faultDesc.str());
         }
         
-        // TODO: 这里可以根据需要更新仓储中的数据或做其他处理
-        // 例如：更新机箱板卡状态为异常
+        // 更新仓储中的板卡状态为异常
+        // 根据机箱号和板卡IP地址（或槽位号）找到对应的机箱和板卡
+        auto chassis = m_chassisRepo->FindByNumber(alert.chassisNumber);
+        if (chassis) {
+            // 优先通过IP地址查找板卡
+            auto* board = chassis->GetBoardByAddress(alert.boardAddress);
+            // 如果通过IP地址找不到，尝试通过槽位号查找
+            if (!board && alert.boardNumber > 0) {
+                board = chassis->GetBoardBySlot(alert.boardNumber);
+            }
+            
+            if (board) {
+                // 获取板卡当前的监控数据，以便在更新状态时保留
+                float voltage = board->GetVoltage();
+                float current = board->GetCurrent();
+                float temperature = board->GetTemperature();
+                std::vector<app::domain::FanSpeed> fanSpeeds = board->GetFanSpeeds();
+                std::vector<app::domain::TaskStatusInfo> tasks = board->GetTasks();
+                
+                // 更新板卡状态：statusFromApi=1表示异常
+                board->UpdateFromApiData(
+                    alert.boardName,
+                    alert.boardStatus,  // 1表示异常，0表示正常
+                    voltage,
+                    current,
+                    temperature,
+                    fanSpeeds,
+                    tasks
+                );
+                
+                // 保存更新后的板卡到仓储
+                // 使用槽位号或IP地址对应的槽位号
+                int slotNumber = alert.boardNumber > 0 ? alert.boardNumber : board->GetBoardNumber();
+                if (slotNumber > 0) {
+                    m_chassisRepo->UpdateBoard(alert.chassisNumber, slotNumber, *board);
+                    std::cout << "已更新板卡状态: 机箱" << alert.chassisNumber 
+                              << " 槽位" << slotNumber 
+                              << " 状态=" << (alert.boardStatus == 0 ? "正常" : "异常") << std::endl;
+                }
+            } else {
+                std::cerr << "未找到板卡: 机箱" << alert.chassisNumber 
+                          << " IP=" << alert.boardAddress 
+                          << " 槽位=" << alert.boardNumber << std::endl;
+            }
+        } else {
+            std::cerr << "未找到机箱: " << alert.chassisNumber << std::endl;
+        }
         
         // 发送成功响应
         SendSuccessResponse(res);

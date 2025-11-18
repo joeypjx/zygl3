@@ -54,7 +54,7 @@ Running main() from /Users/panjinxue/编程/zygl3/third_party/googletest/googlet
 发送任务启动响应: 工作模式=1 (响应ID=0)
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] XKJHTest.TC_HandleTaskStartRequest_Success (3 ms)
+[       OK ] XKJHTest.TC_HandleTaskStartRequest_Success (1 ms)
 [ RUN      ] XKJHTest.TC_HandleTaskStartRequest_Failure
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 开始启动新任务: 模式999
@@ -63,7 +63,7 @@ Running main() from /Users/panjinxue/编程/zygl3/third_party/googletest/googlet
 发送任务启动响应: 工作模式=999 (响应ID=0)
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] XKJHTest.TC_HandleTaskStartRequest_Failure (3 ms)
+[       OK ] XKJHTest.TC_HandleTaskStartRequest_Failure (0 ms)
 [ RUN      ] XKJHTest.TC_HandleTaskStopRequest_Success
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 开始启动新任务: 模式1
@@ -74,7 +74,7 @@ Running main() from /Users/panjinxue/编程/zygl3/third_party/googletest/googlet
 发送任务停止响应: (响应ID=1)
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] XKJHTest.TC_HandleTaskStopRequest_Success (106 ms)
+[       OK ] XKJHTest.TC_HandleTaskStopRequest_Success (105 ms)
 [ RUN      ] XKJHTest.TC_HandleTaskStopRequest_Failure
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 无正在运行的任务
@@ -82,22 +82,22 @@ Running main() from /Users/panjinxue/编程/zygl3/third_party/googletest/googlet
 资源监控广播器已停止
 资源监控广播器已停止
 [       OK ] XKJHTest.TC_HandleTaskStopRequest_Failure (0 ms)
-[----------] 8 tests from XKJHTest (114 ms total)
+[----------] 8 tests from XKJHTest (109 ms total)
 
 [----------] 4 tests from RWKZTest
 [ RUN      ] RWKZTest.TC_DeployStacks_Success
 部署业务链路失败，状态码: -1
-[       OK ] RWKZTest.TC_DeployStacks_Success (0 ms)
+[       OK ] RWKZTest.TC_DeployStacks_Success (1 ms)
 [ RUN      ] RWKZTest.TC_DeployStacks_Failure
 部署业务链路失败，状态码: -1
 [       OK ] RWKZTest.TC_DeployStacks_Failure (0 ms)
 [ RUN      ] RWKZTest.TC_UndeployStacks_Success
 停用业务链路失败，状态码: -1
-[       OK ] RWKZTest.TC_UndeployStacks_Success (0 ms)
+[       OK ] RWKZTest.TC_UndeployStacks_Success (1 ms)
 [ RUN      ] RWKZTest.TC_UndeployStacks_Failure
 停用业务链路失败，状态码: -1
-[       OK ] RWKZTest.TC_UndeployStacks_Failure (0 ms)
-[----------] 4 tests from RWKZTest (2 ms total)
+[       OK ] RWKZTest.TC_UndeployStacks_Failure (1 ms)
+[----------] 4 tests from RWKZTest (5 ms total)
 
 [----------] 2 tests from RWJKTest
 [ RUN      ] RWJKTest.TC_CollectStackInfo_Success
@@ -114,7 +114,7 @@ IP心跳检测失败，状态码: -1
   业务链路信息为空，可能是API未返回数据
 数据采集完成，等待 1 秒...
 数据采集服务已停止
-[       OK ] RWJKTest.TC_CollectStackInfo_Success (1007 ms)
+[       OK ] RWJKTest.TC_CollectStackInfo_Success (1006 ms)
 [ RUN      ] RWJKTest.TC_CollectStackInfo_Failure
 数据采集服务已启动
 
@@ -129,8 +129,8 @@ IP心跳检测失败，状态码: -1
   业务链路信息为空，可能是API未返回数据
 数据采集完成，等待 1 秒...
 数据采集服务已停止
-[       OK ] RWJKTest.TC_CollectStackInfo_Failure (1008 ms)
-[----------] 2 tests from RWJKTest (2016 ms total)
+[       OK ] RWJKTest.TC_CollectStackInfo_Failure (1007 ms)
+[----------] 2 tests from RWJKTest (2014 ms total)
 
 [----------] 6 tests from ZYJKTest
 [ RUN      ] ZYJKTest.TC_CollectBoardInfo_Success
@@ -165,7 +165,7 @@ IP心跳检测失败，状态码: -1
 数据采集服务已停止
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] ZYJKTest.TC_CollectBoardInfo_Success (1007 ms)
+[       OK ] ZYJKTest.TC_CollectBoardInfo_Success (1006 ms)
 [ RUN      ] ZYJKTest.TC_CollectBoardInfo_Failure1
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 数据采集服务已启动
@@ -198,7 +198,7 @@ IP心跳检测失败，状态码: -1
 数据采集服务已停止
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] ZYJKTest.TC_CollectBoardInfo_Failure1 (1010 ms)
+[       OK ] ZYJKTest.TC_CollectBoardInfo_Failure1 (1021 ms)
 [ RUN      ] ZYJKTest.TC_CollectBoardInfo_Failure2
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 数据采集服务已启动
@@ -216,7 +216,7 @@ IP心跳检测失败，状态码: -1
 数据采集服务已停止
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] ZYJKTest.TC_CollectBoardInfo_Failure2 (1009 ms)
+[       OK ] ZYJKTest.TC_CollectBoardInfo_Failure2 (1008 ms)
 [ RUN      ] ZYJKTest.TC_CollectBoardInfo_Failure3
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 数据采集服务已启动
@@ -255,14 +255,11 @@ IP心跳检测失败，状态码: -1
     告警1: 板卡温度过高
     告警2: 板卡电压异常
 发送故障上报成功: 板卡异常 - 机箱:1 槽位:1 IP:192.168.0.101 ...
+已更新板卡状态: 机箱1 槽位1 状态=异常
 告警接收服务器已停止
-/Users/panjinxue/编程/zygl3/tests/ZYJK_test.cpp:337: Failure
-Failed
-当收到板卡异常告警时，源代码必须更新仓储中对应板卡的状态为Abnormal。当前状态: 1，期望状态: Abnormal(2)。请在AlertReceiverServer::HandleBoardAlert中实现TODO：更新机箱板卡状态为异常。实现方式：找到对应机箱和板卡，调用board->UpdateFromApiData设置statusFromApi=1，然后调用chassisRepo->UpdateBoard保存更新
-
 资源监控广播器已停止
 资源监控广播器已停止
-[  FAILED  ] ZYJKTest.TC_HandleBoardAlert_Success (207 ms)
+[       OK ] ZYJKTest.TC_HandleBoardAlert_Success (211 ms)
 [ RUN      ] ZYJKTest.TC_HandleBoardAlert_Failure
 资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
 告警接收服务器已启动，监听端口: 8890
@@ -272,8 +269,8 @@ Failed
 告警接收服务器已停止
 资源监控广播器已停止
 资源监控广播器已停止
-[       OK ] ZYJKTest.TC_HandleBoardAlert_Failure (210 ms)
-[----------] 6 tests from ZYJKTest (4454 ms total)
+[       OK ] ZYJKTest.TC_HandleBoardAlert_Failure (206 ms)
+[----------] 6 tests from ZYJKTest (4463 ms total)
 
 [----------] 2 tests from ZYKZTest
 [ RUN      ] ZYKZTest.TC_resetBoard_Success
@@ -287,9 +284,5 @@ Sending binary data: 4554485357420000696e76616c69642e69702e616464720052455345540
 [----------] 2 tests from ZYKZTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 28 tests from 6 test suites ran. (6588 ms total)
-[  PASSED  ] 27 tests.
-[  FAILED  ] 1 test, listed below:
-[  FAILED  ] ZYJKTest.TC_HandleBoardAlert_Success
-
- 1 FAILED TEST
+[==========] 28 tests from 6 test suites ran. (6593 ms total)
+[  PASSED  ] 28 tests.
