@@ -18,8 +18,8 @@ include_directories(${GTEST_INCLUDE_DIR})
 include_directories(${GMOCK_INCLUDE_DIR})
 
 # 源文件路径（用于链接）
+# 注意：不包含main.cpp，因为Google Test通过gtest_main提供main函数
 set(MAIN_SOURCES
-    ${CMAKE_SOURCE_DIR}/../main.cpp
     ${CMAKE_SOURCE_DIR}/../infrastructure/config/config_manager.cpp
     ${CMAKE_SOURCE_DIR}/../infrastructure/api_client/qyw_api_client.cpp
     ${CMAKE_SOURCE_DIR}/../infrastructure/collectors/data_collector_service.cpp
@@ -30,8 +30,11 @@ set(MAIN_SOURCES
 
 # 测试源文件
 set(TEST_SOURCES
-    unit2_test.cpp
-    unit4_test.cpp
+    XKSJ_test.cpp
+    XKJH_test.cpp
+    RWKZ_test.cpp
+    RWJK_test.cpp
+    ZYJK_test.cpp
     unit5_test.cpp
     unit6_test.cpp
     # 单元1和单元3需要Mock，由于QywApiClient不是接口，需要特殊处理
