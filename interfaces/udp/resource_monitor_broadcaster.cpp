@@ -29,7 +29,7 @@ ResourceMonitorBroadcaster::ResourceMonitorBroadcaster(
     , m_socket(-1)
     , m_running(false)
     , m_nextResponseId(0)
-    , m_chassisController(std::make_unique<ChassisController>()) {
+    , m_chassisController(std::make_unique<ResourceController>()) {
 
     // 初始化socket
     m_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -629,7 +629,7 @@ void ResourceMonitorBroadcaster::BuildChassisSelfCheckResponse(ChassisSelfCheckR
                               << " (IP: " << boardIp << ")" << std::endl;
                     
                     // Ping板卡IP
-                    if (PingBoard(boardIp)) {
+                    if (m_chassisController->SelfcheckBoard(boardIp)) {
                         response.checkResults[boardIdx] = 0;  // 自检成功
                     } else {
                         response.checkResults[boardIdx] = 1;  // 自检失败
@@ -645,16 +645,6 @@ void ResourceMonitorBroadcaster::BuildChassisSelfCheckResponse(ChassisSelfCheckR
             response.checkResults[boardIdx] = 1;
         }
     }
-}
-
-bool ResourceMonitorBroadcaster::PingBoard(const std::string& ipAddress) {
-    // 使用 ping 命令检查连通性
-    // ping -c 1 -W 1 IP地址，-c 1表示只ping一次，-W 1表示超时1秒
-    std::string pingCommand = "ping -c 1 -W 1 " + ipAddress + " > /dev/null 2>&1";
-    int result = std::system(pingCommand.c_str());
-    
-    // ping 成功返回0，失败返回非0
-    return (result == 0);
 }
 
 void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse& response, const ChassisResetRequest& request) {
@@ -697,12 +687,12 @@ void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse&
                 slotNumbers.push_back(boardIdx + 1);  // 槽位号从1开始
                 
                 std::cout << "复位机箱" << chassisNumber << " 板卡" << (boardIdx + 1) << " (IP: " << chassisIp << ")" << std::endl;
-                auto resetResult = m_chassisController->resetChassisBoards(
+                auto resetResult = m_chassisController->resetBoard(
                     chassisIp, slotNumbers, request.requestId);
                 
                 // 根据复位结果设置响应
                 // 0：复位成功，1：没有复位或复位失败
-                if (resetResult.result == ChassisController::OperationResult::SUCCESS) {
+                if (resetResult.result == ResourceController::OperationResult::SUCCESS) {
                     response.resetResults[flagIndex] = 0;  // 复位成功
                 } else {
                     response.resetResults[flagIndex] = 1;  // 复位失败

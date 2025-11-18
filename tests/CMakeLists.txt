@@ -23,6 +23,7 @@ set(MAIN_SOURCES
     ${CMAKE_SOURCE_DIR}/../infrastructure/config/config_manager.cpp
     ${CMAKE_SOURCE_DIR}/../infrastructure/api_client/qyw_api_client.cpp
     ${CMAKE_SOURCE_DIR}/../infrastructure/collectors/data_collector_service.cpp
+    ${CMAKE_SOURCE_DIR}/../infrastructure/controller/resource_controller.cpp
     ${CMAKE_SOURCE_DIR}/../interfaces/udp/resource_monitor_broadcaster.cpp
     ${CMAKE_SOURCE_DIR}/../interfaces/http/alert_receiver_server.cpp
     ${CMAKE_SOURCE_DIR}/../interfaces/cli/cli_service.cpp
@@ -35,12 +36,7 @@ set(TEST_SOURCES
     RWKZ_test.cpp
     RWJK_test.cpp
     ZYJK_test.cpp
-    unit5_test.cpp
-    unit6_test.cpp
-    # 单元1和单元3需要Mock，由于QywApiClient不是接口，需要特殊处理
-    # 可以考虑集成测试或修改架构添加接口
-    # unit1_test.cpp
-    # unit3_test.cpp
+    ZYKZ_test.cpp
     # integration_test.cpp
 )
 

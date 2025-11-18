@@ -1,7 +1,8 @@
-#include "chassis_controller.h"
+#include "resource_controller.h"
 #include <iostream>
 #include <cstring>
 #include <sstream>
+#include <cstdlib>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -9,32 +10,42 @@
 #include <fcntl.h>
 #include <errno.h>
 
-ChassisController::ChassisController() = default;
+ResourceController::ResourceController() = default;
 
-ChassisController::~ChassisController() = default;
+ResourceController::~ResourceController() = default;
 
-ChassisController::OperationResponse ChassisController::resetChassisBoards(
+ResourceController::OperationResponse ResourceController::resetBoard(
     const std::string& target_ip,
     const std::vector<int>& slot_numbers,
     uint32_t req_id) {
     return executeOperation("RESET", target_ip, slot_numbers, req_id);
 }
 
-ChassisController::OperationResponse ChassisController::powerOffChassisBoards(
+ResourceController::OperationResponse ResourceController::powerOffChassisBoards(
     const std::string& target_ip,
     const std::vector<int>& slot_numbers,
     uint32_t req_id) {
     return executeOperation("POWOFF", target_ip, slot_numbers, req_id);
 }
 
-ChassisController::OperationResponse ChassisController::powerOnChassisBoards(
+ResourceController::OperationResponse ResourceController::powerOnChassisBoards(
     const std::string& target_ip,
     const std::vector<int>& slot_numbers,
     uint32_t req_id) {
     return executeOperation("POWON", target_ip, slot_numbers, req_id);
 }
 
-ChassisController::OperationResponse ChassisController::executeOperation(
+bool ResourceController::SelfcheckBoard(const std::string& ipAddress) {
+    // 使用 ping 命令检查连通性
+    // ping -c 1 -W 1 IP地址，-c 1表示只ping一次，-W 1表示超时1秒
+    std::string pingCommand = "ping -c 1 -W 1 " + ipAddress + " > /dev/null 2>&1";
+    int result = std::system(pingCommand.c_str());
+    
+    // ping 成功返回0，失败返回非0
+    return (result == 0);
+}
+
+ResourceController::OperationResponse ResourceController::executeOperation(
     const std::string& cmd,
     const std::string& target_ip,
     const std::vector<int>& slot_numbers,
@@ -46,14 +57,14 @@ ChassisController::OperationResponse ChassisController::executeOperation(
         // 1) 使用与目标的直连socket进行请求-响应
 
         // 2) 构建操作模型并发送到目标 33000 端口
-        ChassisController::OperationModel op_model = buildOperationModel(cmd, target_ip, slot_numbers, req_id);
+        ResourceController::OperationModel op_model = buildOperationModel(cmd, target_ip, slot_numbers, req_id);
         BinaryData binary_data(
             reinterpret_cast<const uint8_t*>(&op_model),
-            reinterpret_cast<const uint8_t*>(&op_model) + sizeof(ChassisController::OperationModel)
+            reinterpret_cast<const uint8_t*>(&op_model) + sizeof(ResourceController::OperationModel)
         );
 
         std::cout << "Executing chassis operation: " << cmd << " to " << target_ip << ":" << server_port_ << "; waiting response on same connection" << std::endl;
-        std::cout << "Sending binary data: " << ChassisController::binaryToHex(binary_data) << std::endl;
+        std::cout << "Sending binary data: " << ResourceController::binaryToHex(binary_data) << std::endl;
 
         int send_fd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (send_fd < 0) {
@@ -165,7 +176,7 @@ ChassisController::OperationResponse ChassisController::executeOperation(
         ::close(send_fd);
 
         response.raw_response = tcp_response;
-        std::cout << "Received response (" << tcp_response.size() << " bytes) from " << target_ip << ":" << server_port_ << ": " << ChassisController::binaryToHex(tcp_response) << std::endl;
+        std::cout << "Received response (" << tcp_response.size() << " bytes) from " << target_ip << ":" << server_port_ << ": " << ResourceController::binaryToHex(tcp_response) << std::endl;
 
         // 5) 解析响应
         std::string message;
@@ -192,16 +203,16 @@ ChassisController::OperationResponse ChassisController::executeOperation(
     return response;
 }
 
-ChassisController::OperationModel ChassisController::buildOperationModel(
+ResourceController::OperationModel ResourceController::buildOperationModel(
     const std::string& cmd,
     const std::string& target_ip,
     const std::vector<int>& slot_numbers,
     uint32_t req_id) const {
     
-    ChassisController::OperationModel model;
+    ResourceController::OperationModel model;
     
     // 清零结构体
-    memset(&model, 0, sizeof(ChassisController::OperationModel));
+    memset(&model, 0, sizeof(ResourceController::OperationModel));
 
     // 填充字段，确保不超出数组边界
     strncpy(model.m_strFlag, operation_flag_.c_str(), sizeof(model.m_strFlag) - 1);
@@ -222,7 +233,7 @@ ChassisController::OperationModel ChassisController::buildOperationModel(
     return model;
 }
 
-ChassisController::OperationResult ChassisController::parseResponse(
+ResourceController::OperationResult ResourceController::parseResponse(
     const BinaryData& response,
     const std::vector<int>& slot_numbers,
     std::vector<SlotResult>& slot_results,
@@ -237,9 +248,9 @@ ChassisController::OperationResult ChassisController::parseResponse(
     }
     
     // 如果响应数据足够大，尝试解析为OperationModel结构
-    if (response.size() >= sizeof(ChassisController::OperationModel)) {
-        const ChassisController::OperationModel* response_model = 
-            reinterpret_cast<const ChassisController::OperationModel*>(response.data());
+    if (response.size() >= sizeof(ResourceController::OperationModel)) {
+        const ResourceController::OperationModel* response_model = 
+            reinterpret_cast<const ResourceController::OperationModel*>(response.data());
         
         std::ostringstream msg;
         msg << "Response - Flag: " << std::string(response_model->m_strFlag, sizeof(response_model->m_strFlag))
@@ -292,3 +303,4 @@ ChassisController::OperationResult ChassisController::parseResponse(
     // 默认认为是成功的
     return OperationResult::SUCCESS;
 }
+

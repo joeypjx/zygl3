@@ -1,5 +1,5 @@
-#ifndef CHASSIS_CONTROLLER_H
-#define CHASSIS_CONTROLLER_H
+#ifndef RESOURCE_CONTROLLER_H
+#define RESOURCE_CONTROLLER_H
 
 #include <string>
 #include <memory>
@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 
-class ChassisController {
+class ResourceController {
 public:
     using BinaryData = std::vector<uint8_t>;
     enum class OperationResult {
@@ -36,21 +36,28 @@ public:
         BinaryData raw_response;
     };
 
-    ChassisController();
-    ~ChassisController();
+    ResourceController();
+    ~ResourceController();
 
     // 仅保留三个对外操作（支持单/多槽位，单槽位请传含一个元素的vector）
-    OperationResponse resetChassisBoards(const std::string& target_ip,
-                                        const std::vector<int>& slot_numbers,
-                                        uint32_t req_id = 0);
+    OperationResponse resetBoard(const std::string& target_ip,
+                                 const std::vector<int>& slot_numbers,
+                                 uint32_t req_id = 0);
 
     OperationResponse powerOffChassisBoards(const std::string& target_ip,
                                            const std::vector<int>& slot_numbers,
                                            uint32_t req_id = 0);    
-
+    
     OperationResponse powerOnChassisBoards(const std::string& target_ip,
                                           const std::vector<int>& slot_numbers,
                                           uint32_t req_id = 0);
+
+    /**
+     * @brief 自检板卡IP地址检查连通性
+     * @param ipAddress 板卡IP地址
+     * @return true表示ping通，false表示ping不通
+     */
+    static bool SelfcheckBoard(const std::string& ipAddress);
 
     // 工具方法（原先来自 TcpClient）
     static std::string binaryToString(const BinaryData& data) {
@@ -106,4 +113,5 @@ private:
                                  std::string& message) const;
 };
 
-#endif // CHASSIS_CONTROLLER_H
+#endif // RESOURCE_CONTROLLER_H
+

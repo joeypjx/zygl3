@@ -13,7 +13,7 @@ set(SOURCES
     infrastructure/config/config_manager.cpp
     infrastructure/api_client/qyw_api_client.cpp
     infrastructure/collectors/data_collector_service.cpp
-    infrastructure/controller/chassis_controller.cpp
+    infrastructure/controller/resource_controller.cpp
     interfaces/udp/resource_monitor_broadcaster.cpp
     interfaces/http/alert_receiver_server.cpp
     interfaces/cli/cli_service.cpp

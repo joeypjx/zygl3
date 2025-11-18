@@ -3,7 +3,7 @@
 #include "domain/i_chassis_repository.h"
 #include "domain/i_stack_repository.h"
 #include "../../infrastructure/api_client/qyw_api_client.h"
-#include "../../infrastructure/controller/chassis_controller.h"
+#include "../../infrastructure/controller/resource_controller.h"
 #include <string>
 #include <memory>
 #include <thread>
@@ -277,13 +277,6 @@ private:
     void BuildChassisSelfCheckResponse(ChassisSelfCheckResponse& response, const ChassisSelfCheckRequest& request);
 
     /**
-     * @brief Ping板卡IP地址检查连通性
-     * @param ipAddress 板卡IP地址
-     * @return true表示ping通，false表示ping不通
-     */
-    bool PingBoard(const std::string& ipAddress);
-
-    /**
      * @brief 将IP地址字符串转换为uint32
      */
     uint32_t IpStringToUint32(const std::string& ipStr);
@@ -297,7 +290,7 @@ private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
-    std::unique_ptr<ChassisController> m_chassisController;  // 机箱控制器
+    std::unique_ptr<ResourceController> m_chassisController;  // 机箱控制器
     std::string m_multicastGroup;
     uint16_t m_port;
     int m_socket;

@@ -10,6 +10,7 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <sstream>
 #include "infrastructure/collectors/data_collector_service.h"
 #include "infrastructure/persistence/in_memory_chassis_repository.h"
 #include "infrastructure/persistence/in_memory_stack_repository.h"
@@ -222,6 +223,33 @@ TEST_F(ZYJKTest, TC_CollectBoardInfo_Failure3) {
  * 注意：由于HandleBoardAlert是私有方法，通过启动HTTP服务器并发送HTTP请求来间接测试
  */
 TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
+    // 首先创建测试机箱和板卡，确保仓储中有对应的数据
+    // 使用Board构造函数设置IP地址，使其与告警请求中的IP地址匹配
+    auto testChassis = TestDataGenerator::CreateTestChassis(1, "TestChassis_1");
+    testChassis->ResizeBoards(14);
+    
+    // 创建板卡对象，设置IP地址为192.168.0.101（与告警请求中的IP地址匹配）
+    Board board("192.168.0.101", 1, BoardType::Computing);
+    // 使用UpdateFromApiData初始化板卡状态为正常
+    std::vector<app::domain::FanSpeed> fanSpeeds;
+    std::vector<TaskStatusInfo> tasks;
+    board.UpdateFromApiData("Board_1", 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
+    
+    // 将板卡添加到机箱
+    auto* boardPtr = testChassis->GetBoardBySlot(1);
+    if (boardPtr) {
+        *boardPtr = board;
+    }
+    chassisRepo->Save(testChassis);
+    
+    // 验证初始状态：板卡状态应该是Normal
+    auto initialChassis = chassisRepo->FindByNumber(1);
+    ASSERT_NE(nullptr, initialChassis) << "应该能找到机箱";
+    auto* initialBoard = initialChassis->GetBoardByAddress("192.168.0.101");
+    ASSERT_NE(nullptr, initialBoard) << "应该能找到板卡";
+    ASSERT_EQ(BoardOperationalStatus::Normal, initialBoard->GetStatus()) 
+        << "初始状态应该是Normal";
+    
     // 创建告警接收服务器
     alertServer = std::make_shared<AlertReceiverServer>(
         chassisRepo, stackRepo, broadcaster, 8889, "127.0.0.1");
@@ -262,10 +290,54 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
     // 验证服务器能够正常停止
     ASSERT_FALSE(alertServer->IsRunning()) << "服务器应该已停止";
     
-    // 验证请求被处理（不会崩溃）
-    // 如果请求成功，应该返回200状态码和成功响应
-    // 如果请求失败（服务器未完全启动），方法也应该能处理
-    ASSERT_TRUE(res || !res) << "请求应该被处理";
+    // 加强验证：必须验证HTTP响应的完整性和正确性
+    ASSERT_TRUE(res) << "HTTP响应不应该为空（Result应该有效）";
+    ASSERT_EQ(200, res->status) << "成功请求应该返回200状态码";
+    
+    // 验证响应Content-Type
+    ASSERT_NE(res->get_header_value("Content-Type").find("application/json"), std::string::npos)
+        << "响应Content-Type应该是application/json";
+    
+    // 验证响应体是有效的JSON
+    nlohmann::json responseJson;
+    ASSERT_NO_THROW(responseJson = nlohmann::json::parse(res->body))
+        << "响应体应该是有效的JSON格式";
+    
+    // 验证JSON结构：必须包含code、message、data字段
+    ASSERT_TRUE(responseJson.contains("code")) << "响应JSON必须包含code字段";
+    ASSERT_TRUE(responseJson.contains("message")) << "响应JSON必须包含message字段";
+    ASSERT_TRUE(responseJson.contains("data")) << "响应JSON必须包含data字段";
+    
+    // 验证成功响应的具体值
+    ASSERT_EQ(0, responseJson["code"].get<int>()) << "成功响应code应该为0";
+    ASSERT_EQ("success", responseJson["message"].get<std::string>()) 
+        << "成功响应message应该为'success'";
+    ASSERT_EQ("success", responseJson["data"].get<std::string>()) 
+        << "成功响应data应该为'success'";
+    
+    // 加强验证：要求源代码必须更新仓储中的板卡状态为异常
+    // 这强制源代码必须实现TODO中的功能：更新机箱板卡状态为异常
+    auto chassis = chassisRepo->FindByNumber(1);
+    ASSERT_NE(nullptr, chassis) << "应该能找到机箱";
+    
+    // 查找对应IP地址的板卡
+    auto* boardAfterAlert = chassis->GetBoardByAddress("192.168.0.101");
+    ASSERT_NE(nullptr, boardAfterAlert) << "应该能找到板卡（IP地址: 192.168.0.101）";
+    
+    // 强制要求：板卡状态必须被更新为Abnormal
+    // 如果源代码未实现状态更新功能，此断言会失败
+    if (boardAfterAlert->GetStatus() != BoardOperationalStatus::Abnormal) {
+        std::ostringstream msg;
+        msg << "当收到板卡异常告警时，源代码必须更新仓储中对应板卡的状态为Abnormal。"
+            << "当前状态: " << static_cast<int>(boardAfterAlert->GetStatus()) 
+            << "，期望状态: Abnormal(2)。"
+            << "请在AlertReceiverServer::HandleBoardAlert中实现TODO：更新机箱板卡状态为异常。"
+            << "实现方式：找到对应机箱和板卡，调用board->UpdateFromApiData设置statusFromApi=1，"
+            << "然后调用chassisRepo->UpdateBoard保存更新";
+        FAIL() << msg.str();
+    }
+    ASSERT_EQ(BoardOperationalStatus::Abnormal, boardAfterAlert->GetStatus())
+        << "板卡状态必须被更新为Abnormal";
 }
 
 /**
@@ -304,9 +376,24 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Failure) {
     // 验证服务器能够正常停止
     ASSERT_FALSE(alertServer->IsRunning()) << "服务器应该已停止";
     
-    // 验证方法能够处理无效JSON（不会崩溃）
-    // 根据代码逻辑，如果JSON解析失败，会捕获异常并返回错误响应
-    // 这里主要验证方法能够处理异常情况，不会崩溃
-    ASSERT_TRUE(res || !res) << "请求应该被处理";
+    // 加强验证：必须验证错误响应的完整性和正确性
+    ASSERT_TRUE(res) << "HTTP响应不应该为空（Result应该有效）";
+    ASSERT_EQ(200, res->status) << "即使JSON无效，HTTP状态码也应该是200（httplib的行为）";
+    
+    // 验证响应体是有效的JSON
+    nlohmann::json responseJson;
+    ASSERT_NO_THROW(responseJson = nlohmann::json::parse(res->body))
+        << "错误响应体也应该是有效的JSON格式";
+    
+    // 验证错误响应的JSON结构
+    ASSERT_TRUE(responseJson.contains("code")) << "错误响应JSON必须包含code字段";
+    ASSERT_TRUE(responseJson.contains("message")) << "错误响应JSON必须包含message字段";
+    ASSERT_TRUE(responseJson.contains("data")) << "错误响应JSON必须包含data字段";
+    
+    // 验证错误响应的具体值
+    ASSERT_EQ(-1, responseJson["code"].get<int>()) << "错误响应code应该为-1";
+    ASSERT_NE(std::string::npos, responseJson["message"].get<std::string>().find("无效的JSON格式"))
+        << "错误响应message应该包含'无效的JSON格式'";
+    ASSERT_EQ("", responseJson["data"].get<std::string>()) << "错误响应data应该为空字符串";
 }
 
