@@ -3,11 +3,13 @@
 #include "domain/i_chassis_repository.h"
 #include "domain/i_stack_repository.h"
 #include "../../infrastructure/api_client/qyw_api_client.h"
+#include "../../infrastructure/controller/chassis_controller.h"
 #include <string>
 #include <memory>
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <vector>
 
 namespace app::interfaces {
 
@@ -106,6 +108,48 @@ struct FaultReportPacket {
     uint16_t command;         // 命令码 F107H (22-23)
     char faultDescription[256]; // 故障描述 (24-279)
 };
+
+/**
+ * @brief 机箱复位请求报文
+ */
+struct ChassisResetRequest {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F001H (22-23)
+    uint32_t requestId;       // 请求ID (24-27)
+    uint8_t resetFlags[108];   // 板卡复位标志位 (28-135) 9个机箱×12块板卡，0：不复位 1：需要复位
+};
+
+/**
+ * @brief 机箱复位响应报文
+ */
+struct ChassisResetResponse {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F101H (22-23)
+    uint32_t responseId;       // 响应ID (24-27)
+    uint8_t resetResults[108]; // 板卡复位结果 (28-135) 9个机箱×12块板卡，0：复位成功 1：没有复位或复位失败
+};
+
+/**
+ * @brief 机箱自检请求报文
+ */
+struct ChassisSelfCheckRequest {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F002H (22-23)
+    uint32_t requestId;       // 请求ID (24-27)
+    uint16_t chassisNumber;   // 机箱号 1-9 (28-29)
+    uint8_t checkFlags[12];   // 板卡自检标志位 (30-41) 机箱内12个板卡，0：自检 1：不需自检
+};
+
+/**
+ * @brief 机箱自检响应报文
+ */
+struct ChassisSelfCheckResponse {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F102H (22-23)
+    uint32_t responseId;       // 响应ID (24-27)
+    uint16_t chassisNumber;   // 机箱号 1-9 (28-29)
+    uint8_t checkResults[12]; // 板卡自检结果 (30-41) 机箱内12个板卡，0：自检成功 1：没有自检或自检失败
+};
 #pragma pack(pop)
 
 /**
@@ -163,6 +207,20 @@ public:
     bool HandleTaskStopRequest(const TaskStopRequest& request);
 
     /**
+     * @brief 处理机箱复位请求并发送响应
+     * @param request 机箱复位请求
+     * @return 是否发送成功
+     */
+    bool HandleChassisResetRequest(const ChassisResetRequest& request);
+
+    /**
+     * @brief 处理机箱自检请求并发送响应
+     * @param request 机箱自检请求
+     * @return 是否发送成功
+     */
+    bool HandleChassisSelfCheckRequest(const ChassisSelfCheckRequest& request);
+
+    /**
      * @brief 发送故障上报组播数据包
      * @param faultDescription 故障描述（最多256字符）
      * @return 是否发送成功
@@ -171,7 +229,7 @@ public:
     
     // 设置UDP命令码（从配置读取）
     void SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
-                    uint16_t taskStartResp, uint16_t taskStopResp, uint16_t faultReport);
+                    uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport);
 
 private:
     /**
@@ -209,6 +267,23 @@ private:
     void BuildTaskStopResponse(TaskStopResponse& response, const TaskStopRequest& request);
 
     /**
+     * @brief 构建机箱复位响应
+     */
+    void BuildChassisResetResponse(ChassisResetResponse& response, const ChassisResetRequest& request);
+
+    /**
+     * @brief 构建机箱自检响应
+     */
+    void BuildChassisSelfCheckResponse(ChassisSelfCheckResponse& response, const ChassisSelfCheckRequest& request);
+
+    /**
+     * @brief Ping板卡IP地址检查连通性
+     * @param ipAddress 板卡IP地址
+     * @return true表示ping通，false表示ping不通
+     */
+    bool PingBoard(const std::string& ipAddress);
+
+    /**
      * @brief 将IP地址字符串转换为uint32
      */
     uint32_t IpStringToUint32(const std::string& ipStr);
@@ -222,6 +297,7 @@ private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
+    std::unique_ptr<ChassisController> m_chassisController;  // 机箱控制器
     std::string m_multicastGroup;
     uint16_t m_port;
     int m_socket;
@@ -240,6 +316,8 @@ private:
     uint16_t m_cmdTaskQueryResp = 0xF105;
     uint16_t m_cmdTaskStartResp = 0xF103;
     uint16_t m_cmdTaskStopResp = 0xF104;
+    uint16_t m_cmdChassisResetResp = 0xF101;     // 机箱复位响应命令码
+    uint16_t m_cmdChassisSelfCheckResp = 0xF102; // 机箱自检响应命令码
     uint16_t m_cmdFaultReport = 0xF107;
 };
 
@@ -269,7 +347,7 @@ public:
     
     // 设置UDP命令码（从配置读取）
     void SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
-                    uint16_t taskStart, uint16_t taskStop);
+                    uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck);
 
 private:
     /**
@@ -291,6 +369,8 @@ private:
     uint16_t m_cmdTaskQuery = 0xF005;
     uint16_t m_cmdTaskStart = 0xF003;
     uint16_t m_cmdTaskStop = 0xF004;
+    uint16_t m_cmdChassisReset = 0xF001;  // 机箱复位请求命令码
+    uint16_t m_cmdChassisSelfCheck = 0xF002; // 机箱自检请求命令码
 };
 
 }

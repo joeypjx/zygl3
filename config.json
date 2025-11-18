@@ -35,6 +35,10 @@
       "task_start_resp": "0xF103",
       "task_stop_resp": "0xF104",
       "task_query_resp": "0xF105",
+      "chassis_reset": "0xF001",
+      "chassis_reset_resp": "0xF101",
+      "chassis_self_check": "0xF002",
+      "chassis_self_check_resp": "0xF102",
       "fault_report": "0xF107"
     }
   },
