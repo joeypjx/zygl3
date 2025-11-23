@@ -32,16 +32,8 @@ public:
     float GetCurrent() const { return m_current; }
     float GetTemperature() const { return m_temperature; }
     const std::vector<FanSpeed>& GetFanSpeeds() const { return m_fanSpeeds; }
-
-    // 获取任务列表
     const std::vector<TaskStatusInfo>& GetTasks() const { return m_tasks; }
-
-    /**
-     * @brief 检查此板卡类型是否允许运行任务
-     */
-    bool CanRunTasks() const {
-        return m_boardType == BoardType::Computing;
-    }
+    std::chrono::system_clock::time_point GetLastUpdateTime() const { return m_lastUpdateTime; }
 
     /**
      * @brief 用来自API的实时数据更新此板卡的状态
@@ -74,48 +66,37 @@ public:
         m_temperature = temperature;
         m_fanSpeeds = fanSpeeds;
 
-        // 核心规则应用：只有计算板卡才能接受任务
-        if (CanRunTasks()) {
-            m_tasks = tasksFromApi;
-        } else {
-            m_tasks.clear(); // 强制清空
-        }
+        // 更新任务列表（不再根据板卡类型过滤）
+        m_tasks = tasksFromApi;
         
         // 更新时间戳
         m_lastUpdateTime = std::chrono::system_clock::now();
     }
 
     /**
-     * @brief 将此板卡标记为"离线"
-     */
-    void MarkAsOffline() {
-        m_status = BoardOperationalStatus::Offline;
-        m_tasks.clear();
-        // 清空更新时间，表示离线
-        m_lastUpdateTime = std::chrono::system_clock::time_point::min();
-    }
-    
-    /**
-     * @brief 获取最后更新时间
-     */
-    std::chrono::system_clock::time_point GetLastUpdateTime() const {
-        return m_lastUpdateTime;
-    }
-    
-    /**
-     * @brief 判断板卡是否在线（基于最后更新时间）
+     * @brief 检查板卡是否在线，如果不在线且当前状态不是离线，则标记为离线
      * @param timeoutSeconds 超时秒数（默认60秒）
-     * @return 是否在线
+     * @return 如果进行了离线标记返回true，否则返回false
      */
-    bool IsOnline(int timeoutSeconds = 60) const {
-        // 如果从未更新过（离线状态），返回false
-        if (m_lastUpdateTime == std::chrono::system_clock::time_point::min()) {
-            return false;
+    bool CheckAndMarkOfflineIfNeeded(int timeoutSeconds = 60) {
+        // 检查板卡是否在线（基于最后更新时间）
+        bool isOnline = false;
+        if (m_lastUpdateTime != std::chrono::system_clock::time_point::min()) {
+            auto now = std::chrono::system_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUpdateTime).count();
+            isOnline = elapsed < timeoutSeconds;
         }
         
-        auto now = std::chrono::system_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUpdateTime).count();
-        return elapsed < timeoutSeconds;
+        // 如果不在线且当前状态不是离线，则标记为离线
+        if (!isOnline) {
+            if (m_status != BoardOperationalStatus::Offline) {
+                m_status = BoardOperationalStatus::Offline;
+                m_tasks.clear();
+                // 保留更新时间，不清空，以便保留最后一次更新的时间信息
+                return true;  // 进行了离线标记
+            }
+        }
+        return false;  // 没有进行离线标记
     }
 
 private:

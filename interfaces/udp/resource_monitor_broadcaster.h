@@ -10,6 +10,7 @@
 #include <atomic>
 #include <mutex>
 #include <vector>
+#include <netinet/in.h>
 
 namespace app::interfaces {
 
@@ -55,7 +56,7 @@ struct TaskQueryResponse {
     uint16_t workMode;        // 工作模式
     uint32_t boardIp;         // 板卡IP
     uint16_t cpuUsage;        // CPU使用率 0-1000千分比
-    uint32_t memoryUsage;     // 内存使用率
+    float memoryUsage;         // 内存使用率（浮点类型）
 };
 
 /**
@@ -183,7 +184,7 @@ public:
      * @param requestId 请求ID
      * @return 是否发送成功
      */
-    bool SendResponse(uint32_t requestId);
+    bool SendResourceMonitorResponse(uint32_t requestId);
 
     /**
      * @brief 发送任务查询响应
@@ -282,9 +283,14 @@ private:
     uint32_t IpStringToUint32(const std::string& ipStr);
 
     /**
-     * @brief 将字符串转换为工作模式/标签名
+     * @brief 将工作模式转换为标签名称
      */
     std::string WorkModeToLabel(uint16_t workMode);
+
+    /**
+     * @brief 将标签名称转换为工作模式
+     */
+    uint16_t LabelToWorkMode(const std::string& label);
 
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
@@ -294,6 +300,7 @@ private:
     std::string m_multicastGroup;
     uint16_t m_port;
     int m_socket;
+    struct sockaddr_in m_multicastAddr;  // 组播地址（在构造函数中初始化）
 
     std::atomic<bool> m_running;
     std::atomic<uint32_t> m_nextResponseId;

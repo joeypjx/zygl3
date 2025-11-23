@@ -248,16 +248,12 @@ void DataCollectorService::CheckAndMarkOfflineBoards(int timeoutSeconds) {
         auto& boards = chassis->GetAllBoardsMutable();
         
         for (auto& board : boards) {
-            // 检查板卡是否在线
-            if (!board.IsOnline(timeoutSeconds)) {
-                // 如果不在线且当前状态不是离线，则标记为离线
-                if (board.GetStatus() != app::domain::BoardOperationalStatus::Offline) {
-                    board.MarkAsOffline();
-                    offlineCount++;
-                    
-                    std::cout << "  板卡离线: 机箱" << chassis->GetChassisNumber() 
-                              << " 槽位" << board.GetBoardNumber() << std::endl;
-                }
+            // 检查板卡是否在线，如果不在线则标记为离线
+            if (board.CheckAndMarkOfflineIfNeeded(timeoutSeconds)) {
+                offlineCount++;
+                
+                std::cout << "  板卡离线: 机箱" << chassis->GetChassisNumber() 
+                          << " 槽位" << board.GetBoardNumber() << std::endl;
             }
         }
     }

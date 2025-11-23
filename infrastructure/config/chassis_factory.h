@@ -87,9 +87,15 @@ public:
     }
 
     /**
-     * @brief 根据槽位号确定板卡类型
+     * @brief 根据槽位号确定板卡类型（默认规则）
      * @param slotNumber 槽位号 (1-14)
      * @return 板卡类型
+     * @note 此方法仅用于没有配置文件时的默认规则。
+     *       实际项目中，板卡类型应该从配置文件读取，因为现在有多种板卡类型：
+     *       - 通用计算I型模块、通用计算II型模块
+     *       - 高性能计算I型模块、高性能计算II型模块
+     *       - 存储模块、缓存模块、SRIO模块等
+     *       这些类型不能简单根据槽位号判断，必须从配置文件指定。
      */
     static app::domain::BoardType DetermineBoardType(int slotNumber) {
         if (slotNumber == 6 || slotNumber == 7) {
@@ -97,7 +103,7 @@ public:
         } else if (slotNumber == 13 || slotNumber == 14) {
             return app::domain::BoardType::Power;    // 电源板卡
         } else {
-            return app::domain::BoardType::Computing; // 计算板卡
+            return app::domain::BoardType::Computing; // 计算板卡（默认）
         }
     }
 
@@ -153,14 +159,46 @@ public:
                             boardConfig.boardNumber = boardJson.value("boardNumber", 0);
                             boardConfig.boardAddress = boardJson.value("boardAddress", "");
                             
-                            // 读取板卡类型（0-计算，1-交换，2-电源）
+                            // 读取板卡类型
+                            // 0-计算板卡, 1-交换板卡, 2-电源板卡
+                            // 3-通用计算I型模块, 4-通用计算II型模块
+                            // 5-高性能计算I型模块, 6-高性能计算II型模块
+                            // 7-存储模块, 8-缓存模块, 9-SRIO模块, 10-以太网交换模块
                             int boardTypeInt = boardJson.value("boardType", 0);
-                            if (boardTypeInt == 1) {
-                                boardConfig.boardType = app::domain::BoardType::Switch;
-                            } else if (boardTypeInt == 2) {
-                                boardConfig.boardType = app::domain::BoardType::Power;
-                            } else {
-                                boardConfig.boardType = app::domain::BoardType::Computing;
+                            switch (boardTypeInt) {
+                                case 1:
+                                    boardConfig.boardType = app::domain::BoardType::Switch;
+                                    break;
+                                case 2:
+                                    boardConfig.boardType = app::domain::BoardType::Power;
+                                    break;
+                                case 3:
+                                    boardConfig.boardType = app::domain::BoardType::GeneralComputingI;
+                                    break;
+                                case 4:
+                                    boardConfig.boardType = app::domain::BoardType::GeneralComputingII;
+                                    break;
+                                case 5:
+                                    boardConfig.boardType = app::domain::BoardType::HighPerformanceComputingI;
+                                    break;
+                                case 6:
+                                    boardConfig.boardType = app::domain::BoardType::HighPerformanceComputingII;
+                                    break;
+                                case 7:
+                                    boardConfig.boardType = app::domain::BoardType::Storage;
+                                    break;
+                                case 8:
+                                    boardConfig.boardType = app::domain::BoardType::Cache;
+                                    break;
+                                case 9:
+                                    boardConfig.boardType = app::domain::BoardType::SRIO;
+                                    break;
+                                case 10:
+                                    boardConfig.boardType = app::domain::BoardType::EthernetSwitch;
+                                    break;
+                                default:
+                                    boardConfig.boardType = app::domain::BoardType::Computing;
+                                    break;
                             }
                             
                             chassisConfig.boards.push_back(boardConfig);

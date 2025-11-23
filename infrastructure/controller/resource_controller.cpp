@@ -37,8 +37,10 @@ ResourceController::OperationResponse ResourceController::powerOnChassisBoards(
 
 bool ResourceController::SelfcheckBoard(const std::string& ipAddress) {
     // 使用 ping 命令检查连通性
-    // ping -c 1 -W 1 IP地址，-c 1表示只ping一次，-W 1表示超时1秒
-    std::string pingCommand = "ping -c 1 -W 1 " + ipAddress + " > /dev/null 2>&1";
+    // ping -c 1 -W 1000 IP地址
+    // -c 1: 只ping一次
+    // -W 1000: 等待响应超时时间1000毫秒（1秒）
+    std::string pingCommand = "ping -c 1 -W 1000 " + ipAddress + " > /dev/null 2>&1";
     int result = std::system(pingCommand.c_str());
     
     // ping 成功返回0，失败返回非0

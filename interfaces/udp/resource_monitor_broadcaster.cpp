@@ -41,6 +41,12 @@ ResourceMonitorBroadcaster::ResourceMonitorBroadcaster(
     // 启用广播
     int broadcast = 1;
     setsockopt(m_socket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    
+    // 初始化组播地址（避免在每次发送时重复设置）
+    memset(&m_multicastAddr, 0, sizeof(m_multicastAddr));
+    m_multicastAddr.sin_family = AF_INET;
+    m_multicastAddr.sin_port = htons(m_port);
+    inet_pton(AF_INET, m_multicastGroup.c_str(), &m_multicastAddr.sin_addr);
 }
 
 ResourceMonitorBroadcaster::~ResourceMonitorBroadcaster() {
@@ -72,7 +78,7 @@ void ResourceMonitorBroadcaster::Stop() {
     std::cout << "资源监控广播器已停止" << std::endl;
 }
 
-bool ResourceMonitorBroadcaster::SendResponse(uint32_t requestId) {
+bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId) {
     if (m_socket < 0) {
         return false;
     }
@@ -87,26 +93,18 @@ bool ResourceMonitorBroadcaster::SendResponse(uint32_t requestId) {
     // 设置命令码
     response.command = m_cmdResourceMonitorResp;
     
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = requestId;
     
     // 构建板卡状态和任务状态数据
     BuildResponseData(response);
     
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-    
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
     
     if (result > 0) {
-        std::cout << "发送资源监控响应: ID=" << response.responseId 
-                  << " (原始请求ID=" << requestId << ")" << std::endl;
+        std::cout << "发送资源监控响应: ID=" << response.responseId << std::endl;
         return true;
     }
     
@@ -197,22 +195,15 @@ bool ResourceMonitorBroadcaster::SendTaskQueryResponse(const TaskQueryRequest& r
     // 设置命令码
     response.command = m_cmdTaskQueryResp;
 
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
 
     // 构建任务查询响应数据
     BuildTaskQueryResponse(response, request);
 
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
 
     if (result > 0) {
         std::cout << "发送任务查询响应: 机箱" << request.chassisNumber
@@ -263,17 +254,29 @@ void ResourceMonitorBroadcaster::BuildTaskQueryResponse(TaskQueryResponse& respo
     }
 
     // 4. 填充响应数据
-    response.taskStatus = 0;  // 正常
+    // 参考BuildResponseData的逻辑：taskStatus == 1（运行中）表示正常，其他表示异常
+    // TaskQueryResponse.taskStatus: 0=正常，1=异常
+    if (taskInfo.taskStatus == 1) {  // 运行中表示正常
+        response.taskStatus = 0;  // 正常
+    } else {
+        response.taskStatus = 1;  // 异常
+    }
 
     // 将taskID字符串转换为uint32 (这里简化处理，实际可能需要更复杂的转换)
     try {
         response.taskId = std::stoul(taskID);
-    } catch (...) {
-        // 如果taskID不是纯数字，使用哈希值
+    } catch (const std::exception&) {
+        // 如果taskID不是纯数字或超出范围，使用哈希值
         response.taskId = std::hash<std::string>{}(taskID);
     }
 
-    response.workMode = 0;  // 工作模式（根据实际情况设置）
+    // 从当前运行标签获取工作模式
+    std::string currentLabel;
+    {
+        std::lock_guard<std::mutex> lock(m_labelMutex);
+        currentLabel = m_currentRunningLabel;
+    }
+    response.workMode = LabelToWorkMode(currentLabel);
 
     // 板卡IP转换
     response.boardIp = IpStringToUint32(board->GetAddress());
@@ -281,8 +284,8 @@ void ResourceMonitorBroadcaster::BuildTaskQueryResponse(TaskQueryResponse& respo
     // CPU使用率转换为千分比 (0-1000)
     response.cpuUsage = static_cast<uint16_t>(resourceUsage->cpuUsage * 1000);
 
-    // 内存使用率转换为千分比
-    response.memoryUsage = static_cast<uint32_t>(resourceUsage->memoryUsage * 1000);
+    // 内存使用率（浮点类型，直接赋值）
+    response.memoryUsage = resourceUsage->memoryUsage;
 
     std::cout << "任务查询成功: taskID=" << taskID
               << " CPU=" << response.cpuUsage / 10.0 << "%"
@@ -312,22 +315,15 @@ bool ResourceMonitorBroadcaster::HandleTaskStartRequest(const TaskStartRequest& 
     // 设置命令码
     response.command = m_cmdTaskStartResp;
 
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
 
     // 构建启动响应数据
     BuildTaskStartResponse(response, request);
 
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
 
     if (result > 0) {
         std::cout << "发送任务启动响应: 工作模式=" << request.workMode
@@ -354,22 +350,15 @@ bool ResourceMonitorBroadcaster::HandleTaskStopRequest(const TaskStopRequest& re
     // 设置命令码
     response.command = m_cmdTaskStopResp;
 
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
 
     // 构建停止响应数据
     BuildTaskStopResponse(response, request);
 
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
 
     if (result > 0) {
         std::cout << "发送任务停止响应: (响应ID=" << response.responseId << ")" << std::endl;
@@ -384,9 +373,6 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
     // 将工作模式转换为标签名称
     std::string label = WorkModeToLabel(request.workMode);
 
-    // 检查是否需要先停止当前任务
-    bool shouldStopCurrent = (request.startStrategy == 0);
-
     // 获取当前正在运行的任务标签
     std::string currentLabel;
     {
@@ -394,39 +380,20 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
         currentLabel = m_currentRunningLabel;
     }
 
-    // 如果策略是先停止当前任务，检查是否有正在运行的任务
-    if (shouldStopCurrent && !currentLabel.empty()) {
-        std::cout << "开始停止当前任务: " << currentLabel << std::endl;
-        
-        // 调用API停止当前任务
-        std::vector<std::string> labels;
-        labels.push_back(currentLabel);
-        auto result = m_apiClient->UndeployStacks(labels);
+    // 调用API启动新任务
+    // startStrategy == 0 表示需要先停止当前任务，通过 stop 参数传递给 DeployStacks
+    int stop = (request.startStrategy == 0) ? 1 : 0;
 
-        // 更新当前运行标签
-        {
-            std::lock_guard<std::mutex> lock(m_labelMutex);
-            m_currentRunningLabel = "";
-        }
-
-        if (!result.failureStackInfos.empty()) {
-            std::cerr << "停止当前任务失败" << std::endl;
-            response.startResult = 1;  // 失败
-            strncpy(response.resultDesc, "停止当前任务失败", 63);
-            return;
-        }
-    }
-
-    // 如果请求的任务已经在运行，直接返回成功
-    if (!currentLabel.empty() && currentLabel == label) {
+    // 如果请求的任务已经在运行，且不需要停止（startStrategy != 0），直接返回成功
+    // 如果需要停止（startStrategy == 0），则允许重启任务
+    if (!currentLabel.empty() && currentLabel == label && stop == 0) {
         std::cout << "任务已在运行: " << label << std::endl;
         response.startResult = 0;  // 成功
         strncpy(response.resultDesc, "任务已在运行", 63);
         return;
     }
-
-    // 调用API启动新任务
-    std::cout << "开始启动新任务: " << label << std::endl;
+    std::cout << "开始启动新任务: " << label 
+              << (stop != 0 ? " (将停止当前任务)" : "") << std::endl;
     
     std::vector<std::string> labels;
     labels.push_back(label);
@@ -435,7 +402,7 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
     std::string account = app::infrastructure::ConfigManager::GetString("/api/account", "admin");
     std::string password = app::infrastructure::ConfigManager::GetString("/api/password", "12q12w12ee");
     
-    auto result = m_apiClient->DeployStacks(labels, account, password);
+    auto result = m_apiClient->DeployStacks(labels, account, password, stop);
 
     if (result.failureStackInfos.empty() && !result.successStackInfos.empty()) {
         // 启动成功
@@ -511,9 +478,32 @@ void ResourceMonitorBroadcaster::BuildTaskStopResponse(TaskStopResponse& respons
 }
 
 std::string ResourceMonitorBroadcaster::WorkModeToLabel(uint16_t workMode) {
-    // 将工作模式编号转换为标签名称
+    // 将工作模式编号转换为标签名称，TODO 待修改
     // 例如：1 -> "模式1", 2 -> "模式2", 3 -> "模式3"
     return "模式" + std::to_string(workMode);
+}
+
+uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
+    // 将标签名称转换为工作模式编号
+    // 例如："模式1" -> 1, "模式2" -> 2, "模式3" -> 3
+    if (label.empty()) {
+        return 0;  // 没有运行任务时返回0
+    }
+    
+    // 检查是否以"模式"开头
+    if (label.length() > 2 && label.substr(0, 2) == "模式") {
+        try {
+            // 提取"模式"后面的数字
+            std::string numStr = label.substr(2);
+            return static_cast<uint16_t>(std::stoul(numStr));
+        } catch (const std::exception&) {
+            // 如果转换失败，返回0
+            return 0;
+        }
+    }
+    
+    // 如果不是"模式X"格式，返回0
+    return 0;
 }
 
 bool ResourceMonitorBroadcaster::HandleChassisResetRequest(const ChassisResetRequest& request) {
@@ -531,22 +521,15 @@ bool ResourceMonitorBroadcaster::HandleChassisResetRequest(const ChassisResetReq
     // 设置命令码
     response.command = m_cmdChassisResetResp;
 
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
 
     // 构建复位响应数据
     BuildChassisResetResponse(response, request);
 
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
 
     if (result > 0) {
         std::cout << "发送机箱复位响应: (响应ID=" << response.responseId << ")" << std::endl;
@@ -572,8 +555,8 @@ bool ResourceMonitorBroadcaster::HandleChassisSelfCheckRequest(const ChassisSelf
     // 设置命令码
     response.command = m_cmdChassisSelfCheckResp;
 
-    // 设置响应ID
-    response.responseId = m_nextResponseId++;
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
 
     // 设置机箱号
     response.chassisNumber = request.chassisNumber;
@@ -581,16 +564,9 @@ bool ResourceMonitorBroadcaster::HandleChassisSelfCheckRequest(const ChassisSelf
     // 构建自检响应数据
     BuildChassisSelfCheckResponse(response, request);
 
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
 
     if (result > 0) {
         std::cout << "发送机箱自检响应: 机箱" << response.chassisNumber 
@@ -659,47 +635,87 @@ void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse&
         const auto& chassis = allChassis[chassisIdx];
         int chassisNumber = chassis->GetChassisNumber();
         
-        // 获取机箱IP地址（使用第7块板卡的IP地址作为机箱IP）
-        // 如果第7块板卡不存在，则使用默认格式
+        // 获取机箱IP地址（使用该机箱中boardType是EthernetSwitch（即10）的第一个板卡作为机箱IP）
         std::string chassisIp;
         const auto& boards = chassis->GetAllBoards();
-        if (boards.size() >= 7 && !boards[6].GetAddress().empty()) {
-            // 从第7块板卡的IP地址提取机箱IP（假设格式为 192.168.x.y，取前三个段）
-            std::string seventhBoardIp = boards[6].GetAddress();
-            size_t lastDot = seventhBoardIp.find_last_of('.');
-            if (lastDot != std::string::npos) {
-                chassisIp = seventhBoardIp.substr(0, lastDot) + ".1";
-            } else {
-                chassisIp = "192.168." + std::to_string(chassisNumber) + ".1";
+        
+        // 查找第一个EthernetSwitch类型的板卡
+        bool foundEthernetSwitch = false;
+        for (const auto& board : boards) {
+            if (board.GetBoardType() == app::domain::BoardType::EthernetSwitch && 
+                !board.GetAddress().empty()) {
+                // 直接使用EthernetSwitch板卡的IP地址作为机箱IP
+                chassisIp = board.GetAddress();
+                foundEthernetSwitch = true;
+                break;
             }
-        } else {
-            chassisIp = "192.168." + std::to_string(chassisNumber) + ".1";
         }
         
-        // 遍历12块板卡
+        // 如果没有找到EthernetSwitch板卡，使用默认格式
+        if (!foundEthernetSwitch) {
+            chassisIp = "192.168." + std::to_string(chassisNumber * 2) + ".180";
+        }
+        
+        // 先收集该机箱所有需要复位的板卡槽位号
+        std::vector<int> slotNumbers;
+        std::vector<size_t> flagIndices;  // 记录对应的flagIndex，用于后续设置结果
+        
         for (int boardIdx = 0; boardIdx < 12; ++boardIdx) {
             size_t flagIndex = chassisIdx * 12 + boardIdx;
             
             // 检查是否需要复位该板卡
             if (request.resetFlags[flagIndex] == 1) {
-                // 需要复位，调用 ChassisController
-                std::vector<int> slotNumbers;
                 slotNumbers.push_back(boardIdx + 1);  // 槽位号从1开始
-                
-                std::cout << "复位机箱" << chassisNumber << " 板卡" << (boardIdx + 1) << " (IP: " << chassisIp << ")" << std::endl;
-                auto resetResult = m_chassisController->resetBoard(
-                    chassisIp, slotNumbers, request.requestId);
-                
-                // 根据复位结果设置响应
-                // 0：复位成功，1：没有复位或复位失败
-                if (resetResult.result == ResourceController::OperationResult::SUCCESS) {
-                    response.resetResults[flagIndex] = 0;  // 复位成功
-                } else {
-                    response.resetResults[flagIndex] = 1;  // 复位失败
-                }
+                flagIndices.push_back(flagIndex);
             } else {
                 // 不需要复位，保持为1（没有复位）
                 response.resetResults[flagIndex] = 1;
+            }
+        }
+        
+        // 如果有需要复位的板卡，一次性调用resetBoard
+        if (!slotNumbers.empty()) {
+            std::cout << "复位机箱" << chassisNumber << " 板卡";
+            for (size_t i = 0; i < slotNumbers.size(); ++i) {
+                std::cout << slotNumbers[i];
+                if (i < slotNumbers.size() - 1) {
+                    std::cout << ",";
+                }
+            }
+            std::cout << " (IP: " << chassisIp << ")" << std::endl;
+            
+            auto resetResult = m_chassisController->resetBoard(
+                chassisIp, slotNumbers, request.requestId);
+            
+            // 根据复位结果设置每个板卡的响应
+            // 0：复位成功，1：没有复位或复位失败
+            if (resetResult.result == ResourceController::OperationResult::SUCCESS ||
+                resetResult.result == ResourceController::OperationResult::PARTIAL_SUCCESS) {
+                // 先初始化所有板卡为失败，然后根据slot_results更新
+                for (size_t flagIndex : flagIndices) {
+                    response.resetResults[flagIndex] = 1;  // 默认失败
+                }
+                
+                // 根据slot_results设置每个槽位的结果
+                for (const auto& slotResult : resetResult.slot_results) {
+                    // 找到对应的flagIndex
+                    for (size_t i = 0; i < slotNumbers.size(); ++i) {
+                        if (slotNumbers[i] == slotResult.slot_number) {
+                            size_t flagIndex = flagIndices[i];
+                            if (slotResult.status == ResourceController::SlotStatus::NO_OPERATION_OR_SUCCESS) {
+                                response.resetResults[flagIndex] = 0;  // 复位成功
+                            } else {
+                                response.resetResults[flagIndex] = 1;  // 复位失败
+                            }
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // 整体操作失败，所有板卡都标记为失败
+                for (size_t flagIndex : flagIndices) {
+                    response.resetResults[flagIndex] = 1;  // 复位失败
+                }
             }
         }
     }
@@ -730,16 +746,9 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     strncpy(packet.faultDescription, faultDescription.c_str(), descLen);
     packet.faultDescription[descLen] = '\0';
     
-    // 设置发送地址
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(m_port);
-    inet_pton(AF_INET, m_multicastGroup.c_str(), &addr.sin_addr);
-    
-    // 发送组播数据包
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &packet, sizeof(packet), 0,
-                        (struct sockaddr*)&addr, sizeof(addr));
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
     
     if (result > 0) {
         std::cout << "发送故障上报成功: " << faultDescription.substr(0, 50) << "..." << std::endl;
@@ -855,77 +864,77 @@ void ResourceMonitorListener::ListenLoop() {
         ssize_t recvLen = recvfrom(m_socket, buffer, sizeof(buffer), 0,
                                     (struct sockaddr*)&senderAddr, &addrLen);
 
-        if (recvLen > 0 && recvLen >= sizeof(ResourceMonitorRequest)) {
-            // 先尝试解析命令码（位于22-23字节）
-            if (recvLen >= 24) {
-                uint16_t command;
-                memcpy(&command, buffer + 22, 2);
+        // 至少需要24字节才能读取命令码（header[22] + command[2]）
+        if (recvLen > 0 && recvLen >= 24) {
+            // 先解析命令码（位于22-23字节）
+            uint16_t command;
+            memcpy(&command, buffer + 22, 2);
 
-                if (command == m_cmdResourceMonitor && recvLen >= sizeof(ResourceMonitorRequest)) {
-                    // 资源监控请求
-                    ResourceMonitorRequest* request = (ResourceMonitorRequest*)buffer;
-                    std::cout << "收到资源监控请求: ID=" << request->requestId << std::endl;
+            // 根据命令码检查对应的请求大小
+            if (command == m_cmdResourceMonitor && recvLen >= sizeof(ResourceMonitorRequest)) {
+                // 资源监控请求
+                ResourceMonitorRequest* request = (ResourceMonitorRequest*)buffer;
+                std::cout << "收到资源监控请求: ID=" << request->requestId << std::endl;
 
                     // 发送响应
                     if (m_broadcaster) {
-                        m_broadcaster->SendResponse(request->requestId);
+                        m_broadcaster->SendResourceMonitorResponse(request->requestId);
                     }
-                }
-                else if (command == m_cmdTaskQuery && recvLen >= sizeof(TaskQueryRequest)) {
-                    // 任务查看请求
-                    TaskQueryRequest* request = (TaskQueryRequest*)buffer;
-                    std::cout << "收到任务查看请求: 机箱" << request->chassisNumber
-                              << " 板卡" << request->boardNumber
-                              << " 任务序号" << request->taskIndex
-                              << " (请求ID=" << request->requestId << ")" << std::endl;
+            }
+            else if (command == m_cmdTaskQuery && recvLen >= sizeof(TaskQueryRequest)) {
+                // 任务查看请求
+                TaskQueryRequest* request = (TaskQueryRequest*)buffer;
+                std::cout << "收到任务查看请求: 机箱" << request->chassisNumber
+                          << " 板卡" << request->boardNumber
+                          << " 任务序号" << request->taskIndex
+                          << " (请求ID=" << request->requestId << ")" << std::endl;
 
-                    // 发送任务查询响应
-                    if (m_broadcaster) {
-                        m_broadcaster->SendTaskQueryResponse(*request);
-                    }
+                // 发送任务查询响应
+                if (m_broadcaster) {
+                    m_broadcaster->SendTaskQueryResponse(*request);
                 }
-                else if (command == m_cmdTaskStart && recvLen >= sizeof(TaskStartRequest)) {
-                    // 任务启动请求
-                    TaskStartRequest* request = (TaskStartRequest*)buffer;
-                    std::cout << "收到任务启动请求: 工作模式=" << request->workMode
-                              << " 启动策略=" << request->startStrategy
-                              << " (请求ID=" << request->requestId << ")" << std::endl;
+            }
+            else if (command == m_cmdTaskStart && recvLen >= sizeof(TaskStartRequest)) {
+                // 任务启动请求
+                TaskStartRequest* request = (TaskStartRequest*)buffer;
+                std::cout << "收到任务启动请求: 工作模式=" << request->workMode
+                          << " 启动策略=" << request->startStrategy
+                          << " (请求ID=" << request->requestId << ")" << std::endl;
 
-                    // 发送任务启动响应
-                    if (m_broadcaster) {
-                        m_broadcaster->HandleTaskStartRequest(*request);
-                    }
+                // 发送任务启动响应
+                if (m_broadcaster) {
+                    m_broadcaster->HandleTaskStartRequest(*request);
                 }
-                else if (command == m_cmdTaskStop && recvLen >= sizeof(TaskStopRequest)) {
-                    // 任务停止请求
-                    TaskStopRequest* request = (TaskStopRequest*)buffer;
-                    std::cout << "收到任务停止请求: (请求ID=" << request->requestId << ")" << std::endl;
+            }
+            else if (command == m_cmdTaskStop && recvLen >= sizeof(TaskStopRequest)) {
+                // 任务停止请求
+                TaskStopRequest* request = (TaskStopRequest*)buffer;
+                std::cout << "收到任务停止请求: (请求ID=" << request->requestId << ")" << std::endl;
 
-                    // 发送任务停止响应
-                    if (m_broadcaster) {
-                        m_broadcaster->HandleTaskStopRequest(*request);
-                    }
+                // 发送任务停止响应
+                if (m_broadcaster) {
+                    m_broadcaster->HandleTaskStopRequest(*request);
                 }
-                else if (command == m_cmdChassisReset && recvLen >= sizeof(ChassisResetRequest)) {
-                    // 机箱复位请求
-                    ChassisResetRequest* request = (ChassisResetRequest*)buffer;
-                    std::cout << "收到机箱复位请求: (请求ID=" << request->requestId << ")" << std::endl;
+            }
+            else if (command == m_cmdChassisReset && recvLen >= sizeof(ChassisResetRequest)) {
+                // 机箱复位请求
+                ChassisResetRequest* request = (ChassisResetRequest*)buffer;
+                std::cout << "收到机箱复位请求: (请求ID=" << request->requestId << ")" << std::endl;
 
-                    // 发送机箱复位响应
-                    if (m_broadcaster) {
-                        m_broadcaster->HandleChassisResetRequest(*request);
-                    }
+                // 发送机箱复位响应
+                if (m_broadcaster) {
+                    m_broadcaster->HandleChassisResetRequest(*request);
                 }
-                else if (command == m_cmdChassisSelfCheck && recvLen >= sizeof(ChassisSelfCheckRequest)) {
-                    // 机箱自检请求
-                    ChassisSelfCheckRequest* request = (ChassisSelfCheckRequest*)buffer;
-                    std::cout << "收到机箱自检请求: 机箱" << request->chassisNumber 
-                              << " (请求ID=" << request->requestId << ")" << std::endl;
+            }
+            else if (command == m_cmdChassisSelfCheck && recvLen >= sizeof(ChassisSelfCheckRequest)) {
+                // 机箱自检请求
+                ChassisSelfCheckRequest* request = (ChassisSelfCheckRequest*)buffer;
+                std::cout << "收到机箱自检请求: 机箱" << request->chassisNumber 
+                          << " (请求ID=" << request->requestId << ")" << std::endl;
 
-                    // 发送机箱自检响应
-                    if (m_broadcaster) {
-                        m_broadcaster->HandleChassisSelfCheckRequest(*request);
-                    }
+                // 发送机箱自检响应
+                if (m_broadcaster) {
+                    m_broadcaster->HandleChassisSelfCheckRequest(*request);
                 }
             }
         }

@@ -2,7 +2,7 @@
  * @file XKJH_test.cpp
  * @brief ResourceMonitorBroadcaster方法测试
  * 
- * 测试SendResponse、SendTaskQueryResponse、HandleTaskStartRequest、HandleTaskStopRequest四个方法
+ * 测试SendResourceMonitorResponse、SendTaskQueryResponse、HandleTaskStartRequest、HandleTaskStopRequest四个方法
  */
 
 #include <gtest/gtest.h>
@@ -91,26 +91,26 @@ protected:
 };
 
 /**
- * @brief TC-SendResponse-Success: SendResponse方法正常情况测试
+ * @brief TC-SendResponse-Success: SendResourceMonitorResponse方法正常情况测试
  */
 TEST_F(XKJHTest, TC_SendResponse_Success) {
     // 准备测试数据：确保有机箱数据
     ASSERT_GT(chassisRepo->Size(), 0) << "应该有测试机箱数据";
     
-    // 调用SendResponse
+    // 调用SendResourceMonitorResponse
     uint32_t requestId = 12345;
-    bool result = broadcaster->SendResponse(requestId);
+    bool result = broadcaster->SendResourceMonitorResponse(requestId);
     
     // 验证发送成功（在正常环境中，socket应该有效）
     // 注意：实际发送可能失败（网络问题），但方法应该被调用
     // 这里主要验证方法不会崩溃，且返回合理的值
     // 如果socket有效，应该返回true；如果无效，返回false
     // 由于无法直接控制socket状态，我们验证方法被正确调用
-    ASSERT_TRUE(result || !result) << "SendResponse应该返回bool值";
+    ASSERT_TRUE(result || !result) << "SendResourceMonitorResponse应该返回bool值";
 }
 
 /**
- * @brief TC-SendResponse-Failure: SendResponse方法异常情况测试
+ * @brief TC-SendResponse-Failure: SendResourceMonitorResponse方法异常情况测试
  * 
  * 注意：由于socket是私有成员，无法直接模拟socket失败
  * 这个测试主要验证在没有数据或socket无效时的行为
@@ -123,13 +123,13 @@ TEST_F(XKJHTest, TC_SendResponse_Failure) {
         emptyChassisRepo, emptyStackRepo, apiClient, "234.186.1.99", 0x100A);
     emptyBroadcaster->Start();
     
-    // 调用SendResponse（即使没有数据，方法也应该能处理）
+    // 调用SendResourceMonitorResponse（即使没有数据，方法也应该能处理）
     uint32_t requestId = 12345;
-    bool result = emptyBroadcaster->SendResponse(requestId);
+    bool result = emptyBroadcaster->SendResourceMonitorResponse(requestId);
     
     // 验证方法被调用（不会崩溃）
     // 结果可能是true或false，取决于socket状态
-    ASSERT_TRUE(result || !result) << "SendResponse应该返回bool值";
+    ASSERT_TRUE(result || !result) << "SendResourceMonitorResponse应该返回bool值";
     
     emptyBroadcaster->Stop();
 }

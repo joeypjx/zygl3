@@ -192,7 +192,7 @@ std::vector<BoardInfoResponse> QywApiClient::ParseBoardInfoResponse(const std::s
                 
                 boardInfo.chassisName = boardJson.value("chassisName", "");
                 boardInfo.chassisNumber = boardJson.value("chassisNumber", 0);
-                boardInfo.boardName = boardJson.value("boardName", "");  // 已修正拼写错误
+                boardInfo.boardName = boardJson.value("boardName", ""); 
                 boardInfo.boardNumber = boardJson.value("boardNumber", 0);
                 boardInfo.boardType = boardJson.value("boardType", 0);
                 boardInfo.boardAddress = boardJson.value("boardAddress", "");
