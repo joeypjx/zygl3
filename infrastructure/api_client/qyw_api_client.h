@@ -20,6 +20,20 @@ struct FanSpeed {
 };
 
 /**
+ * @brief 任务信息
+ */
+struct TaskInfo {
+    std::string taskID;
+    int taskStatus;  // 1-运行中, 2-已完成, 3-异常, 0-其他
+    std::string serviceName;
+    std::string serviceUUID;
+    std::string stackName;
+    std::string stackUUID;
+    
+    TaskInfo() : taskStatus(0) {}
+};
+
+/**
  * @brief 外部API响应数据结构
  */
 struct BoardInfoResponse {
@@ -34,16 +48,7 @@ struct BoardInfoResponse {
     float current;   // 电流
     float temperature; // 温度
     std::vector<FanSpeed> fanSpeeds;  // 风扇信息
-    
-    struct TaskInfo {
-        std::string taskID;
-        int taskStatus;  // 1-运行中, 2-已完成, 3-异常, 0-其他
-        std::string serviceName;
-        std::string serviceUUID;
-        std::string stackName;
-        std::string stackUUID;
-    };
-    std::vector<TaskInfo> taskInfos;
+    std::vector<TaskInfo> taskInfos;  // 任务信息
     
     BoardInfoResponse() : chassisNumber(0), boardNumber(0), boardType(0), 
                          boardStatus(0), voltage(0.0f), current(0.0f), temperature(0.0f) {}

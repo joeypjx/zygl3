@@ -45,14 +45,14 @@ protected:
         Board board("192.168.0.101", 1, BoardType::Computing);
         std::vector<TaskStatusInfo> taskInfos;
         std::vector<app::domain::FanSpeed> fanSpeeds;
-        board.UpdateFromApiData("Board_1", 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+        board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
         
         // 添加任务到板卡
         TaskStatusInfo taskInfo;
         taskInfo.taskID = "task-1";
         taskInfo.taskStatus = 1; // 运行中
         taskInfos.push_back(taskInfo);
-        board.UpdateFromApiData("Board_1", 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+        board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
         
         chassis->UpdateBoardBySlot(1, board);
         chassisRepo->Save(chassis);

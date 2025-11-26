@@ -122,6 +122,8 @@ void DataCollectorService::CollectBoardInfo() {
                 
                 // 更新板卡状态
                 board->UpdateFromApiData(apiBoardInfo.boardName,
+                                        apiBoardInfo.boardAddress,
+                                        static_cast<app::domain::BoardType>(apiBoardInfo.boardType),
                                         apiBoardInfo.boardStatus,
                                         apiBoardInfo.voltage,
                                         apiBoardInfo.current,
@@ -246,14 +248,21 @@ void DataCollectorService::CheckAndMarkOfflineBoards(int timeoutSeconds) {
     int offlineCount = 0;
     for (const auto& chassis : allChassis) {
         auto& boards = chassis->GetAllBoardsMutable();
+        int chassisNumber = chassis->GetChassisNumber();
         
         for (auto& board : boards) {
             // 检查板卡是否在线，如果不在线则标记为离线
             if (board.CheckAndMarkOfflineIfNeeded(timeoutSeconds)) {
                 offlineCount++;
                 
-                std::cout << "  板卡离线: 机箱" << chassis->GetChassisNumber() 
-                          << " 槽位" << board.GetBoardNumber() << std::endl;
+                // 保存更新后的板卡到仓储
+                int slotNumber = board.GetBoardNumber();
+                if (slotNumber > 0) {
+                    m_chassisRepo->UpdateBoard(chassisNumber, slotNumber, board);
+                }
+                
+                std::cout << "  板卡离线: 机箱" << chassisNumber 
+                          << " 槽位" << slotNumber << std::endl;
             }
         }
     }

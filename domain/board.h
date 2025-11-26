@@ -36,24 +36,51 @@ public:
     std::chrono::system_clock::time_point GetLastUpdateTime() const { return m_lastUpdateTime; }
 
     /**
+     * @brief 更新板卡状态
+     * @param status 板卡运行状态
+     */
+    void UpdateStatus(BoardOperationalStatus status) {
+        m_status = status;
+        m_lastUpdateTime = std::chrono::system_clock::now();
+    }
+
+    /**
+     * @brief 更新板卡状态（从API状态值）
+     * @param statusFromApi 板卡状态 (0-正常, 1-异常)
+     */
+    void UpdateStatus(int statusFromApi) {
+        m_status = (statusFromApi == 0) 
+                   ? BoardOperationalStatus::Normal 
+                   : BoardOperationalStatus::Abnormal;
+        m_lastUpdateTime = std::chrono::system_clock::now();
+    }
+
+    /**
      * @brief 用来自API的实时数据更新此板卡的状态
      * @param boardName 板卡名称
+     * @param boardAddress 板卡IP地址
+     * @param boardType 板卡类型
      * @param statusFromApi 板卡状态 (0-正常, 1-异常)
      * @param voltage 电压
      * @param current 电流
      * @param temperature 温度
      * @param fanSpeeds 风扇信息列表
      * @param tasksFromApi 板卡上的任务列表
+     * @note m_boardNumber 不会被更新，因为它是板卡的唯一标识
      */
     void UpdateFromApiData(const std::string& boardName,
+                          const std::string& boardAddress,
+                          BoardType boardType,
                           int statusFromApi,
                           float voltage,
                           float current,
                           float temperature,
                           const std::vector<FanSpeed>& fanSpeeds,
                           const std::vector<TaskStatusInfo>& tasksFromApi) {
-        // 更新板卡基本信息
+        // 更新板卡基本信息（除了 m_boardNumber）
         m_boardName = boardName;
+        m_boardAddress = boardAddress;
+        m_boardType = boardType;
         
         // 根据API的返回值更新状态
         m_status = (statusFromApi == 0) 

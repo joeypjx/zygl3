@@ -61,7 +61,6 @@ void AlertReceiverServer::Stop() {
 }
 
 void AlertReceiverServer::ServerLoop() {
-    std::string addr = m_host + ":" + std::to_string(m_port);
     m_server.listen(m_host.c_str(), m_port);
 }
 
@@ -123,23 +122,8 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
             }
             
             if (board) {
-                // 获取板卡当前的监控数据，以便在更新状态时保留
-                float voltage = board->GetVoltage();
-                float current = board->GetCurrent();
-                float temperature = board->GetTemperature();
-                std::vector<app::domain::FanSpeed> fanSpeeds = board->GetFanSpeeds();
-                std::vector<app::domain::TaskStatusInfo> tasks = board->GetTasks();
-                
-                // 更新板卡状态：statusFromApi=1表示异常
-                board->UpdateFromApiData(
-                    alert.boardName,
-                    alert.boardStatus,  // 1表示异常，0表示正常
-                    voltage,
-                    current,
-                    temperature,
-                    fanSpeeds,
-                    tasks
-                );
+                // 更新板卡状态：statusFromApi=1表示异常，0表示正常
+                board->UpdateStatus(alert.boardStatus);
                 
                 // 保存更新后的板卡到仓储
                 // 使用槽位号或IP地址对应的槽位号

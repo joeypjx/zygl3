@@ -233,7 +233,7 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
     // 使用UpdateFromApiData初始化板卡状态为正常
     std::vector<app::domain::FanSpeed> fanSpeeds;
     std::vector<TaskStatusInfo> tasks;
-    board.UpdateFromApiData("Board_1", 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
     
     // 将板卡添加到机箱
     auto* boardPtr = testChassis->GetBoardBySlot(1);

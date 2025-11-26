@@ -1,6 +1,5 @@
 #include "qyw_api_client.h"
 #include "../../json.hpp"
-#include <sstream>
 #include <iostream>
 
 using nlohmann::json;
@@ -78,9 +77,7 @@ DeployResponse QywApiClient::DeployStacks(const std::vector<std::string>& labels
     requestBody["stackLabels"] = labels;
     requestBody["account"] = account;
     requestBody["password"] = password;
-    if (stop != 0) {
-        requestBody["stop"] = stop;
-    }
+    requestBody["stop"] = stop;
 
     auto res = m_client.Post(m_deployEndpoint.c_str(),
                              requestBody.dump(),
@@ -214,7 +211,7 @@ std::vector<BoardInfoResponse> QywApiClient::ParseBoardInfoResponse(const std::s
                 // 解析任务信息
                 if (boardJson.contains("taskInfos")) {
                     for (const auto& taskJson : boardJson["taskInfos"]) {
-                        BoardInfoResponse::TaskInfo taskInfo;
+                        TaskInfo taskInfo;
                         taskInfo.taskID = taskJson.value("taskID", "");
                         taskInfo.taskStatus = taskJson.value("taskStatus", 0);  // 1-运行中, 2-已完成, 3-异常, 0-其他
                         taskInfo.serviceName = taskJson.value("serviceName", "");
