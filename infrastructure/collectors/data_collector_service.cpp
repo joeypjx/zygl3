@@ -231,9 +231,6 @@ void DataCollectorService::CollectStackInfo() {
             stack->AddOrUpdateService(service);
         }
         
-        // 重新计算整体状态
-        stack->CalculateOverallStatus();
-        
         // 保存到仓储
         m_stackRepo->Save(stack);
     }

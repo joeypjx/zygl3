@@ -77,7 +77,7 @@ DeployResponse QywApiClient::DeployStacks(const std::vector<std::string>& labels
     requestBody["stackLabels"] = labels;
     requestBody["account"] = account;
     requestBody["password"] = password;
-    requestBody["stop"] = stop;
+        requestBody["stop"] = stop;
 
     auto res = m_client.Post(m_deployEndpoint.c_str(),
                              requestBody.dump(),

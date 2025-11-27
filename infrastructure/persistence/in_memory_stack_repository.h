@@ -3,7 +3,6 @@
 #include "domain/i_stack_repository.h"
 #include "domain/stack.h"
 #include <map>
-#include <set>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -36,7 +35,6 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         std::string stackUUID = stack->GetStackUUID();
         m_stackMap[stackUUID] = stack;
-        UpdateLabelIndex(stack);
     }
 
     /**
@@ -49,30 +47,6 @@ public:
             return it->second;
         }
         return nullptr;
-    }
-
-    /**
-     * @brief 根据标签查找所有业务链路
-     */
-    std::vector<std::shared_ptr<app::domain::Stack>> FindByLabel(const std::string& label) override {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        
-        std::vector<std::shared_ptr<app::domain::Stack>> result;
-        
-        auto it = m_labelIndex.find(label);
-        if (it != m_labelIndex.end()) {
-            const auto& stackUUIDs = it->second;
-            result.reserve(stackUUIDs.size());
-            
-            for (const auto& uuid : stackUUIDs) {
-                auto stackIt = m_stackMap.find(uuid);
-                if (stackIt != m_stackMap.end()) {
-                    result.push_back(stackIt->second);
-                }
-            }
-        }
-        
-        return result;
     }
 
     /**
@@ -113,7 +87,6 @@ public:
     void Clear() override {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_stackMap.clear();
-        m_labelIndex.clear();
     }
 
     /**
@@ -125,34 +98,8 @@ public:
     }
 
 private:
-    /**
-     * @brief 更新标签索引
-     * @detail 用于快速根据标签查找业务链路
-     */
-    void UpdateLabelIndex(std::shared_ptr<app::domain::Stack> stack) {
-        if (!stack) {
-            return;
-        }
-        
-        // 先移除旧的索引
-        for (auto& pair : m_labelIndex) {
-            auto& stackUUIDs = pair.second;
-            stackUUIDs.erase(stack->GetStackUUID());
-        }
-        
-        // 添加新的索引
-        const auto& labels = stack->GetLabels();
-        for (const auto& labelInfo : labels) {
-            m_labelIndex[labelInfo.stackLabelUUID].insert(stack->GetStackUUID());
-        }
-    }
-
-private:
     // K: stackUUID, V: shared_ptr<Stack>
     std::map<std::string, std::shared_ptr<app::domain::Stack>> m_stackMap;
-    
-    // K: labelUUID, V: set<stackUUID>
-    std::map<std::string, std::set<std::string>> m_labelIndex;
     
     // 互斥锁，保证线程安全
     mutable std::mutex m_mutex;

@@ -26,11 +26,6 @@ public:
     virtual std::shared_ptr<Stack> FindByUUID(const std::string& stackUUID) = 0;
 
     /**
-     * @brief 根据标签查找所有业务链路
-     */
-    virtual std::vector<std::shared_ptr<Stack>> FindByLabel(const std::string& label) = 0;
-
-    /**
      * @brief 获取所有业务链路
      */
     virtual std::vector<std::shared_ptr<Stack>> GetAll() = 0;

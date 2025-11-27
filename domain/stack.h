@@ -101,31 +101,6 @@ public:
         m_stackLabels = labels;
     }
 
-    /**
-     * @brief 重新计算整体运行状态
-     * @detail 根据所有组件和任务的状态来计算Stack的整体运行状态
-     */
-    void CalculateOverallStatus() {
-        bool hasAbnormal = false;
-        bool hasNormal = false;
-
-        for (const auto& pair : m_services) {
-            const auto& service = pair.second;
-            if (service.GetServiceStatus() == 3) { // 运行异常
-                hasAbnormal = true;
-                break;
-            } else if (service.GetServiceStatus() == 2) { // 运行正常
-                hasNormal = true;
-            }
-        }
-
-        if (hasAbnormal) {
-            m_stackRunningStatus = 2; // 异常运行
-        } else if (hasNormal) {
-            m_stackRunningStatus = 1; // 正常运行
-        }
-    }
-
 private:
     std::string m_stackUUID;                      // 业务链路UUID
     std::string m_stackName;                      // 业务链路名称
