@@ -70,7 +70,8 @@ int main() {
         ConfigManager::GetHexUint16("/udp/commands/task_stop_resp", 0xF104),
         ConfigManager::GetHexUint16("/udp/commands/chassis_reset_resp", 0xF101),
         ConfigManager::GetHexUint16("/udp/commands/chassis_self_check_resp", 0xF102),
-        ConfigManager::GetHexUint16("/udp/commands/fault_report", 0xF107)
+        ConfigManager::GetHexUint16("/udp/commands/fault_report", 0xF107),
+        ConfigManager::GetHexUint16("/udp/commands/bmc_query_resp", 0xF106)
     );
     broadcaster->Start();
 
@@ -86,7 +87,8 @@ int main() {
         ConfigManager::GetHexUint16("/udp/commands/task_start", 0xF003),
         ConfigManager::GetHexUint16("/udp/commands/task_stop", 0xF004),
         ConfigManager::GetHexUint16("/udp/commands/chassis_reset", 0xF001),
-        ConfigManager::GetHexUint16("/udp/commands/chassis_self_check", 0xF002)
+        ConfigManager::GetHexUint16("/udp/commands/chassis_self_check", 0xF002),
+        ConfigManager::GetHexUint16("/udp/commands/bmc_query", 0xF006)
     );
     listener->Start();
     

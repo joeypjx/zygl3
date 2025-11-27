@@ -63,7 +63,7 @@ void ResourceMonitorBroadcaster::Start() {
 }
 
 void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
-                                             uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport) {
+                                             uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport, uint16_t bmcQueryResp) {
     m_cmdResourceMonitorResp = resourceMonitorResp;
     m_cmdTaskQueryResp = taskQueryResp;
     m_cmdTaskStartResp = taskStartResp;
@@ -71,6 +71,7 @@ void ResourceMonitorBroadcaster::SetCommand(uint16_t resourceMonitorResp, uint16
     m_cmdChassisResetResp = chassisResetResp;
     m_cmdChassisSelfCheckResp = chassisSelfCheckResp;
     m_cmdFaultReport = faultReport;
+    m_cmdBmcQueryResp = bmcQueryResp;
 }
 
 void ResourceMonitorBroadcaster::Stop() {
@@ -759,6 +760,71 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     return false;
 }
 
+bool ResourceMonitorBroadcaster::HandleBmcQueryRequest(const BmcQueryRequest& request) {
+    if (m_socket < 0) {
+        return false;
+    }
+
+    // 构建响应报文
+    BmcQueryResponse response;
+    memset(&response, 0, sizeof(response));
+
+    // 设置头部（22字节）
+    memset(response.header, 0, 22);
+
+    // 设置命令码
+    response.command = m_cmdBmcQueryResp;
+
+    // 设置响应ID（与请求ID一致）
+    response.responseId = request.requestId;
+
+    // 构建BMC查询响应数据
+    BuildBmcQueryResponse(response, request);
+
+    // 发送组播数据包（使用构造函数中初始化的组播地址）
+    int result = sendto(m_socket, &response, sizeof(response), 0,
+                        (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
+
+    if (result > 0) {
+        std::cout << "发送BMC查询响应: (响应ID=" << response.responseId << ")" << std::endl;
+        return true;
+    }
+
+    std::cerr << "发送BMC查询响应失败: " << strerror(errno) << std::endl;
+    return false;
+}
+
+void ResourceMonitorBroadcaster::BuildBmcQueryResponse(BmcQueryResponse& response, const BmcQueryRequest& request) {
+    // 初始化所有数据为0
+    memset(response.temperature, 0, sizeof(response.temperature));
+    memset(response.voltage, 0, sizeof(response.voltage));
+    memset(response.current, 0, sizeof(response.current));
+
+    // 获取所有机箱
+    auto allChassis = m_chassisRepo->GetAll();
+
+    // 遍历9个机箱（协议要求9个机箱×12块板卡）
+    for (size_t chassisIdx = 0; chassisIdx < allChassis.size() && chassisIdx < 9; ++chassisIdx) {
+        const auto& chassis = allChassis[chassisIdx];
+        const auto& boards = chassis->GetAllBoards();
+
+        // 遍历12块板卡（协议要求12块板卡）
+        for (size_t boardIdx = 0; boardIdx < 12 && boardIdx < boards.size(); ++boardIdx) {
+            const auto& board = boards[boardIdx];
+            
+            // 计算在数组中的索引：机箱索引 * 12 + 板卡索引
+            size_t arrayIndex = chassisIdx * 12 + boardIdx;
+
+            // 从板卡获取监控数据
+            response.temperature[arrayIndex] = board.GetTemperature();
+            response.voltage[arrayIndex] = board.GetVoltage();
+            response.current[arrayIndex] = board.GetCurrent();
+        }
+    }
+
+    std::cout << "BMC查询响应构建完成" << std::endl;
+}
+
 // ResourceMonitorListener 实现
 ResourceMonitorListener::ResourceMonitorListener(
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
@@ -843,13 +909,14 @@ void ResourceMonitorListener::Stop() {
 }
 
 void ResourceMonitorListener::SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
-                                          uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck) {
+                                          uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck, uint16_t bmcQuery) {
     m_cmdResourceMonitor = resourceMonitor;
     m_cmdTaskQuery = taskQuery;
     m_cmdTaskStart = taskStart;
     m_cmdTaskStop = taskStop;
     m_cmdChassisReset = chassisReset;
     m_cmdChassisSelfCheck = chassisSelfCheck;
+    m_cmdBmcQuery = bmcQuery;
 }
 
 void ResourceMonitorListener::ListenLoop() {
@@ -935,6 +1002,16 @@ void ResourceMonitorListener::ListenLoop() {
                 // 发送机箱自检响应
                 if (m_broadcaster) {
                     m_broadcaster->HandleChassisSelfCheckRequest(*request);
+                }
+            }
+            else if (command == m_cmdBmcQuery && recvLen >= sizeof(BmcQueryRequest)) {
+                // BMC查询请求
+                BmcQueryRequest* request = (BmcQueryRequest*)buffer;
+                std::cout << "收到BMC查询请求: (请求ID=" << request->requestId << ")" << std::endl;
+
+                // 发送BMC查询响应
+                if (m_broadcaster) {
+                    m_broadcaster->HandleBmcQueryRequest(*request);
                 }
             }
         }

@@ -151,6 +151,27 @@ struct ChassisSelfCheckResponse {
     uint16_t chassisNumber;   // 机箱号 1-9 (28-29)
     uint8_t checkResults[12]; // 板卡自检结果 (30-41) 机箱内12个板卡，0：自检成功 1：没有自检或自检失败
 };
+
+/**
+ * @brief BMC查询请求报文
+ */
+struct BmcQueryRequest {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F006H (22-23)
+    uint32_t requestId;       // 请求ID (24-27)
+};
+
+/**
+ * @brief BMC查询响应报文
+ */
+struct BmcQueryResponse {
+    char header[22];           // 报文头部 (0-21)
+    uint16_t command;         // 命令码 F106H (22-23)
+    uint32_t responseId;      // 响应ID (24-27)
+    float temperature[108];    // 温度 (28-459) 9个机箱×12块板卡，每块板卡4字节，单精度浮点型
+    float voltage[108];        // 电压 (460-891) 9个机箱×12块板卡，每块板卡4字节，单精度浮点型
+    float current[108];         // 电流 (892-1323) 9个机箱×12块板卡，每块板卡4字节，单精度浮点型
+};
 #pragma pack(pop)
 
 /**
@@ -227,10 +248,17 @@ public:
      * @return 是否发送成功
      */
     bool SendFaultReport(const std::string& faultDescription);
+
+    /**
+     * @brief 处理BMC查询请求并发送响应
+     * @param request BMC查询请求
+     * @return 是否发送成功
+     */
+    bool HandleBmcQueryRequest(const BmcQueryRequest& request);
     
     // 设置UDP命令码（从配置读取）
     void SetCommand(uint16_t resourceMonitorResp, uint16_t taskQueryResp, 
-                    uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport);
+                    uint16_t taskStartResp, uint16_t taskStopResp, uint16_t chassisResetResp, uint16_t chassisSelfCheckResp, uint16_t faultReport, uint16_t bmcQueryResp);
 
 private:
     /**
@@ -278,6 +306,11 @@ private:
     void BuildChassisSelfCheckResponse(ChassisSelfCheckResponse& response, const ChassisSelfCheckRequest& request);
 
     /**
+     * @brief 构建BMC查询响应
+     */
+    void BuildBmcQueryResponse(BmcQueryResponse& response, const BmcQueryRequest& request);
+
+    /**
      * @brief 将IP地址字符串转换为uint32
      */
     uint32_t IpStringToUint32(const std::string& ipStr);
@@ -319,6 +352,7 @@ private:
     uint16_t m_cmdChassisResetResp = 0xF101;     // 机箱复位响应命令码
     uint16_t m_cmdChassisSelfCheckResp = 0xF102; // 机箱自检响应命令码
     uint16_t m_cmdFaultReport = 0xF107;
+    uint16_t m_cmdBmcQueryResp = 0xF106;        // BMC查询响应命令码
 };
 
 /**
@@ -347,7 +381,7 @@ public:
     
     // 设置UDP命令码（从配置读取）
     void SetCommand(uint16_t resourceMonitor, uint16_t taskQuery, 
-                    uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck);
+                    uint16_t taskStart, uint16_t taskStop, uint16_t chassisReset, uint16_t chassisSelfCheck, uint16_t bmcQuery);
 
 private:
     /**
@@ -371,6 +405,7 @@ private:
     uint16_t m_cmdTaskStop = 0xF004;
     uint16_t m_cmdChassisReset = 0xF001;  // 机箱复位请求命令码
     uint16_t m_cmdChassisSelfCheck = 0xF002; // 机箱自检请求命令码
+    uint16_t m_cmdBmcQuery = 0xF006;      // BMC查询请求命令码
 };
 
 }
