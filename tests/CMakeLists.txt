@@ -31,19 +31,20 @@ set(MAIN_SOURCES
 
 # 测试源文件
 set(TEST_SOURCES
-    XKSJ_test.cpp
-    XKJH_test.cpp
-    RWKZ_test.cpp
-    RWJK_test.cpp
-    ZYJK_test.cpp
-    ZYKZ_test.cpp
-    # integration_test.cpp
+    unit_test/XKSJ_test.cpp
+    unit_test/XKJH_test.cpp
+    unit_test/RWKZ_test.cpp
+    unit_test/RWJK_test.cpp
+    unit_test/ZYJK_test.cpp
+    unit_test/ZYKZ_test.cpp
+    integration_test.cpp
+    integration_2_test.cpp
 )
 
 # Mock和工具源文件
 set(MOCK_SOURCES
-    mocks/mock_api_client.cpp
-    # utils/test_data_generator.cpp  # 如果实现需要
+    unit_test/mocks/mock_api_client.cpp
+    # unit_test/utils/test_data_generator.cpp  # 如果实现需要
 )
 
 # 创建测试可执行文件

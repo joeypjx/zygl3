@@ -21,8 +21,8 @@
 #include "domain/board.h"
 #include "domain/value_objects.h"
 #include "utils/test_data_generator.h"
-#include "../httplib.h"
-#include "../json.hpp"
+#include "httplib.h"
+#include "json.hpp"
 
 using namespace app::infrastructure;
 using namespace app::domain;
