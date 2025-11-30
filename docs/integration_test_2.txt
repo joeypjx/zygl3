@@ -1,0 +1,293 @@
+Running main() from /Users/panjinxue/编程/zygl3/third_party/googletest/googletest/src/gtest_main.cc
+Note: Google Test filter = Integration2Test.*
+[==========] Running 19 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 19 tests from Integration2Test
+[ RUN      ] Integration2Test.TC_CollectBoardInfo_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  检测到 14 个板卡离线
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_CollectBoardInfo_Success (1008 ms)
+[ RUN      ] Integration2Test.TC_HandleBoardAlert_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+告警接收服务器已启动，监听端口: 8889
+
+收到板卡异常上报...
+板卡异常信息:
+  机箱: 1 (TestChassis_1)
+  板卡: 1 (Board_1)
+  IP地址: 192.168.0.101
+  板卡状态: 异常
+  告警信息数量: 2
+    告警1: 板卡温度过高
+    告警2: 板卡电压异常
+发送故障上报成功: 板卡异常 - 机箱:1 槽位:1 IP:192.168.0.101 ...
+已更新板卡状态: 机箱1 槽位1 状态=异常
+告警接收服务器已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_HandleBoardAlert_Success (207 ms)
+[ RUN      ] Integration2Test.TC_resetBoard_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+Executing chassis operation: RESET to 127.0.0.1:33000; waiting response on same connection
+Sending binary data: 45544853574200003132372e302e302e310000000000000052455345540000000101010000000000000000000000000039300000
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_resetBoard_Success (0 ms)
+[ RUN      ] Integration2Test.TC_selfcheckBoard_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_selfcheckBoard_Success (2095 ms)
+[ RUN      ] Integration2Test.TC_CollectStackInfo_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_CollectStackInfo_Success (1007 ms)
+[ RUN      ] Integration2Test.TC_DeployStacks_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+部署业务链路失败，状态码: -1
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_DeployStacks_Success (1005 ms)
+[ RUN      ] Integration2Test.TC_UndeployStacks_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+停用业务链路失败，状态码: -1
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_UndeployStacks_Success (1007 ms)
+[ RUN      ] Integration2Test.TC_SendResponse_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+发送资源监控响应: ID=12345
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_SendResponse_Success (4 ms)
+[ RUN      ] Integration2Test.TC_SendTaskQueryResponse_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+任务查询成功: taskID=task-1 CPU=5000% MEM=6%
+发送任务查询响应: 机箱1 板卡1 任务0 (响应ID=12345)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_SendTaskQueryResponse_Success (1 ms)
+[ RUN      ] Integration2Test.TC_HandleTaskStartRequest_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+开始启动新任务: 模式1 (将停止当前任务)
+部署业务链路失败，状态码: -1
+任务启动失败: 任务启动失败
+发送任务启动响应: 工作模式=1 (响应ID=12345)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_HandleTaskStartRequest_Success (1 ms)
+[ RUN      ] Integration2Test.TC_HandleTaskStopRequest_Success
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+开始启动新任务: 模式1 (将停止当前任务)
+部署业务链路失败，状态码: -1
+任务启动失败: 任务启动失败
+发送任务启动响应: 工作模式=1 (响应ID=11111)
+无正在运行的任务
+发送任务停止响应: (响应ID=12345)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_HandleTaskStopRequest_Success (107 ms)
+[ RUN      ] Integration2Test.TC_Chassis_SaveSuccess
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+发送资源监控响应: ID=54321
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_Chassis_SaveSuccess (0 ms)
+[ RUN      ] Integration2Test.TC_Stack_SaveSuccess
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+任务查询成功: taskID=task-from-stack CPU=5000% MEM=6%
+发送任务查询响应: 机箱1 板卡1 任务0 (响应ID=12345)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_Stack_SaveSuccess (0 ms)
+[ RUN      ] Integration2Test.TC_ResourceController_resetBoard_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+Executing chassis operation: RESET to 192.168.0.101:33000; waiting response on same connection
+Sending binary data: 45544853574200003139322e3136382e302e31303100000052455345540000000101000000000000000000000000000031d40000
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_ResourceController_resetBoard_Integration (10001 ms)
+[ RUN      ] Integration2Test.TC_ResourceController_SelfcheckBoard_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_ResourceController_SelfcheckBoard_Integration (2017 ms)
+[ RUN      ] Integration2Test.TC_QywApiClient_DeployStacks_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+部署业务链路失败，状态码: -1
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_QywApiClient_DeployStacks_Integration (1003 ms)
+[ RUN      ] Integration2Test.TC_QywApiClient_UndeployStacks_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+停用业务链路失败，状态码: -1
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_QywApiClient_UndeployStacks_Integration (1003 ms)
+[ RUN      ] Integration2Test.TC_InMemoryChassisRepository_Save_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+发送资源监控响应: ID=11111
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  板卡离线: 机箱6 槽位0
+  检测到 13 个板卡离线
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_InMemoryChassisRepository_Save_Integration (1009 ms)
+[ RUN      ] Integration2Test.TC_InMemoryStackRepository_Save_Integration
+资源监控广播器已启动 (组播地址: 234.186.1.99:4106)
+任务查询成功: taskID=task-2 CPU=5500% MEM=6.5%
+发送任务查询响应: 机箱1 板卡1 任务0 (响应ID=22222)
+数据采集服务已启动
+
+开始采集数据...
+  发送IP心跳检测...
+IP心跳检测失败，状态码: -1
+  采集板卡信息...
+获取板卡信息失败，状态码: -1
+  板卡信息为空，可能是API未返回数据
+  采集业务链路信息...
+获取业务链路信息失败，状态码: -1
+  业务链路信息为空，可能是API未返回数据
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  板卡离线: 机箱1 槽位0
+  检测到 13 个板卡离线
+数据采集完成，等待 1 秒...
+数据采集服务已停止
+资源监控广播器已停止
+资源监控广播器已停止
+[       OK ] Integration2Test.TC_InMemoryStackRepository_Save_Integration (1007 ms)
+[----------] 19 tests from Integration2Test (22490 ms total)
+
+[----------] Global test environment tear-down
+[==========] 19 tests from 1 test suite ran. (22490 ms total)
+[  PASSED  ] 19 tests.
