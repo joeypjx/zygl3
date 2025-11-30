@@ -1,0 +1,47 @@
+---------------------------------------------------------------------------
+1 (Local) /home/z/zygl3/httplib.h:3918 RH.LEAK (2:Error) Analyze
+Resource acquired to 'sock' at line 3884 may be lost here.
+  * httplib.h:3884: Resource is acquired: 'sock' in the call to 'socket'
+  * httplib.h:3918: 'sock' is overwritten
+  * httplib.h:3918: Resource is lost: 'sock'
+  * httplib.h:3918: List of instantiations (may be incomplete)
+    * httplib.h:3918: httplib::detail::create_socket<httplib::Server::create_server_socket::#_LAMBDA_#httplib.h:7942:7#>
+    * httplib.h:3918: httplib::detail::create_socket<httplib::detail::create_client_socket::#_LAMBDA_#httplib.h:4096:7#>
+Current status 'Analyze'
+
+---------------------------------------------------------------------------
+2 (Local) /home/z/zygl3/httplib.h:3992 RH.LEAK (2:Error) Analyze
+Resource acquired to 'sock' at line 3962 may be lost here.
+  * httplib.h:3936: Continue loop iteration, while rp is true
+  * httplib.h:3963: Resource is acquired: 'sock' in the call to 'socket'
+  * httplib.h:3992: quit is true
+  * httplib.h:3992: Break statement causes loop exit.
+    * httplib.h:3936: See loop head here.
+  * httplib.h:3992: Resource is lost: 'sock'
+  * httplib.h:3992: List of instantiations (may be incomplete)
+    * httplib.h:3992: httplib::detail::create_socket<httplib::Server::create_server_socket::#_LAMBDA_#httplib.h:7942:7#>
+    * httplib.h:3992: httplib::detail::create_socket<httplib::detail::create_client_socket::#_LAMBDA_#httplib.h:4096:7#>
+Current status 'Analyze'
+
+---------------------------------------------------------------------------
+3 (Local) /home/z/zygl3/httplib.h:3993 RH.LEAK (2:Error) Analyze
+Resource acquired to 'sock' at line 3962 may be lost here.
+  * httplib.h:3936: Continue loop iteration, while rp is true
+  * httplib.h:3963: Resource is acquired: 'sock' in the call to 'socket'
+  * httplib.h:3993: Resource is lost: 'sock'
+  * httplib.h:3993: List of instantiations (may be incomplete)
+    * httplib.h:3993: httplib::detail::create_socket<httplib::Server::create_server_socket::#_LAMBDA_#httplib.h:7942:7#>
+    * httplib.h:3993: httplib::detail::create_socket<httplib::detail::create_client_socket::#_LAMBDA_#httplib.h:4096:7#>
+Current status 'Analyze'
+
+---------------------------------------------------------------------------
+4 (Local) /home/z/zygl3/infrastructure/controller/resource_controller.cpp:283 UNINIT.STACK.MIGHT (1:Critical) Analyze
+'slot_result.status' might be used uninitialized in this function.
+  * resource_controller.cpp:272: 'slot_result.status' is declared.
+  * resource_controller.cpp:275: slot_status==static_cast<char> (SlotStatus::NO_OPERATION_OR_SUCCESS) is false
+  * resource_controller.cpp:278: slot_status==static_cast<char> (SlotStatus::REQUEST_OPERATION_OR_FAILED) is false
+  * resource_controller.cpp:283: 'slot_result.status' is used, but is uninitialized.
+Current status 'Analyze'
+
+Summary: 4 Local
+4 Total Issue(s)
