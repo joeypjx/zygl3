@@ -7,6 +7,7 @@
 #include "src/domain/stack.h"
 #include "src/infrastructure/api_client/qyw_api_client.h"
 #include "src/infrastructure/config/config_manager.h"
+#include <spdlog/spdlog.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -53,8 +54,8 @@ bool CliService::IsRunning() const {
 }
 
 void CliService::Run() {
-    std::cout << "\n=== CLI服务已启动 ===" << std::endl;
-    std::cout << "输入 'help' 查看可用命令" << std::endl;
+    spdlog::info("=== CLI服务已启动 ===");
+    spdlog::info("输入 'help' 查看可用命令");
     
     std::string line;
     while (m_running) {
@@ -76,14 +77,14 @@ void CliService::Run() {
         ProcessCommand(line);
     }
     
-    std::cout << "\nCLI服务已停止" << std::endl;
+    spdlog::info("CLI服务已停止");
 }
 
 void CliService::ProcessCommand(const std::string& command) {
     if (command == "help" || command == "h") {
         PrintHelp();
     } else if (command == "quit" || command == "exit" || command == "q") {
-        std::cout << "退出CLI服务..." << std::endl;
+        spdlog::info("退出CLI服务...");
         m_running = false;
     } else if (command == "list" || command == "ls") {
         PrintAllChassisOverview();
@@ -104,7 +105,7 @@ void CliService::ProcessCommand(const std::string& command) {
             labels.push_back(label);
         }
         if (labels.empty()) {
-            std::cout << "请提供至少一个业务标签" << std::endl;
+            spdlog::warn("请提供至少一个业务标签");
         } else {
             DeployStacks(labels);
         }
@@ -119,7 +120,7 @@ void CliService::ProcessCommand(const std::string& command) {
             labels.push_back(label);
         }
         if (labels.empty()) {
-            std::cout << "请提供至少一个业务标签" << std::endl;
+            spdlog::warn("请提供至少一个业务标签");
         } else {
             UndeployStacks(labels);
         }
@@ -135,7 +136,7 @@ void CliService::ProcessCommand(const std::string& command) {
             if (!stackUUID.empty()) {
                 PrintStackDetail(stackUUID);
             } else {
-                std::cout << "请提供业务链路的UUID" << std::endl;
+                spdlog::warn("请提供业务链路的UUID");
             }
         } else {
             // 尝试解析为机箱号
@@ -145,8 +146,8 @@ void CliService::ProcessCommand(const std::string& command) {
             PrintChassisDetail(chassisNumber);
         }
     } else {
-        std::cout << "未知命令: " << command << std::endl;
-        std::cout << "输入 'help' 查看可用命令" << std::endl;
+        spdlog::warn("未知命令: {}", command);
+        spdlog::info("输入 'help' 查看可用命令");
     }
 }
 
@@ -195,7 +196,7 @@ void CliService::PrintChassisDetail(int chassisNumber) {
     auto chassis = m_chassisRepo->FindByNumber(chassisNumber);
     
     if (!chassis) {
-        std::cout << "未找到机箱号: " << chassisNumber << std::endl;
+        spdlog::warn("未找到机箱号: {}", chassisNumber);
         return;
     }
     
@@ -351,7 +352,7 @@ void CliService::PrintStackDetail(const std::string& stackUUID) {
     auto stack = m_stackRepo->FindByUUID(stackUUID);
     
     if (!stack) {
-        std::cout << "未找到业务链路UUID: " << stackUUID << std::endl;
+        spdlog::warn("未找到业务链路UUID: {}", stackUUID);
         return;
     }
     
@@ -518,16 +519,16 @@ std::string CliService::TaskStatusToString(int status) const {
 
 void CliService::DeployStacks(const std::vector<std::string>& labels) {
     if (!m_apiClient) {
-        std::cout << "错误: API客户端未初始化" << std::endl;
+        spdlog::error("错误: API客户端未初始化");
         return;
     }
     
-    std::cout << "\n正在启动业务链路，标签: ";
+    std::string labelsStr;
     for (size_t i = 0; i < labels.size(); ++i) {
-        std::cout << labels[i];
-        if (i < labels.size() - 1) std::cout << ", ";
+        labelsStr += labels[i];
+        if (i < labels.size() - 1) labelsStr += ", ";
     }
-    std::cout << std::endl;
+    spdlog::info("正在启动业务链路，标签: {}", labelsStr);
     
     // 从配置读取账号密码
     std::string account = app::infrastructure::ConfigManager::GetString("/api/account", "admin");
@@ -559,7 +560,7 @@ void CliService::DeployStacks(const std::vector<std::string>& labels) {
     }
     
     if (response.successStackInfos.empty() && response.failureStackInfos.empty()) {
-        std::cout << "未找到匹配的业务链路" << std::endl;
+        spdlog::warn("未找到匹配的业务链路");
     }
     
     PrintSeparator();
@@ -567,16 +568,16 @@ void CliService::DeployStacks(const std::vector<std::string>& labels) {
 
 void CliService::UndeployStacks(const std::vector<std::string>& labels) {
     if (!m_apiClient) {
-        std::cout << "错误: API客户端未初始化" << std::endl;
+        spdlog::error("错误: API客户端未初始化");
         return;
     }
     
-    std::cout << "\n正在停止业务链路，标签: ";
+    std::string labelsStr;
     for (size_t i = 0; i < labels.size(); ++i) {
-        std::cout << labels[i];
-        if (i < labels.size() - 1) std::cout << ", ";
+        labelsStr += labels[i];
+        if (i < labels.size() - 1) labelsStr += ", ";
     }
-    std::cout << std::endl;
+    spdlog::info("正在停止业务链路，标签: {}", labelsStr);
     
     auto response = m_apiClient->UndeployStacks(labels);
     
@@ -604,7 +605,7 @@ void CliService::UndeployStacks(const std::vector<std::string>& labels) {
     }
     
     if (response.successStackInfos.empty() && response.failureStackInfos.empty()) {
-        std::cout << "未找到匹配的业务链路" << std::endl;
+        spdlog::warn("未找到匹配的业务链路");
     }
     
     PrintSeparator();

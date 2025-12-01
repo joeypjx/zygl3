@@ -1,6 +1,6 @@
 #include "config_manager.h"
+#include <spdlog/spdlog.h>
 #include <fstream>
-#include <iostream>
 
 using nlohmann::json;
 
@@ -13,13 +13,13 @@ void ConfigManager::LoadFromFile(const std::string& path) {
     std::call_once(s_loaded, [&]() {
         std::ifstream in(path);
         if (!in) {
-            std::cerr << "配置文件不存在或无法读取: " << path << std::endl;
+            spdlog::error("配置文件不存在或无法读取: {}", path);
             return;
         }
         try {
             in >> s_config;
         } catch (const std::exception& e) {
-            std::cerr << "解析配置文件失败: " << e.what() << std::endl;
+            spdlog::error("解析配置文件失败: {}", e.what());
         }
     });
 }
