@@ -7,13 +7,13 @@
 
 #include <memory>
 #include <string>
-#include "domain/chassis.h"
-#include "domain/board.h"
-#include "domain/stack.h"
-#include "domain/service.h"
-#include "domain/task.h"
-#include "domain/value_objects.h"
-#include "infrastructure/api_client/qyw_api_client.h"
+#include "src/domain/chassis.h"
+#include "src/domain/board.h"
+#include "src/domain/stack.h"
+#include "src/domain/service.h"
+#include "src/domain/task.h"
+#include "src/domain/value_objects.h"
+#include "src/infrastructure/api_client/qyw_api_client.h"
 
 namespace app::test {
 

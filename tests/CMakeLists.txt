@@ -14,19 +14,21 @@ add_subdirectory("${GTEST_ROOT}" "${CMAKE_BINARY_DIR}/googletest" EXCLUDE_FROM_A
 
 # 包含目录
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 include_directories(${GTEST_INCLUDE_DIR})
 include_directories(${GMOCK_INCLUDE_DIR})
 
 # 源文件路径（用于链接）
 # 注意：不包含main.cpp，因为Google Test通过gtest_main提供main函数
 set(MAIN_SOURCES
-    ${CMAKE_SOURCE_DIR}/../infrastructure/config/config_manager.cpp
-    ${CMAKE_SOURCE_DIR}/../infrastructure/api_client/qyw_api_client.cpp
-    ${CMAKE_SOURCE_DIR}/../infrastructure/collectors/data_collector_service.cpp
-    ${CMAKE_SOURCE_DIR}/../infrastructure/controller/resource_controller.cpp
-    ${CMAKE_SOURCE_DIR}/../interfaces/udp/resource_monitor_broadcaster.cpp
-    ${CMAKE_SOURCE_DIR}/../interfaces/http/alert_receiver_server.cpp
-    ${CMAKE_SOURCE_DIR}/../interfaces/cli/cli_service.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/config/config_manager.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/config/chassis_factory.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/api_client/qyw_api_client.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/collectors/data_collector_service.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/controller/resource_controller.cpp
+    ${CMAKE_SOURCE_DIR}/../src/interfaces/udp/resource_monitor_broadcaster.cpp
+    ${CMAKE_SOURCE_DIR}/../src/interfaces/http/alert_receiver_server.cpp
+    ${CMAKE_SOURCE_DIR}/../src/interfaces/cli/cli_service.cpp
 )
 
 # 测试源文件
@@ -48,10 +50,10 @@ set(MOCK_SOURCES
 )
 
 # 创建测试可执行文件
-add_executable(zygl3_tests ${TEST_SOURCES} ${MAIN_SOURCES})
+add_executable(zygl_tests ${TEST_SOURCES} ${MAIN_SOURCES})
 
 # 链接Google Test库
-target_link_libraries(zygl3_tests
+target_link_libraries(zygl_tests
     gtest
     gtest_main
     gmock
@@ -60,12 +62,12 @@ target_link_libraries(zygl3_tests
 
 # 如果是macOS，可能需要链接pthread
 if(APPLE)
-    target_link_libraries(zygl3_tests pthread)
+    target_link_libraries(zygl_tests pthread)
 endif()
 
 # 启用测试
 enable_testing()
 
 # 添加测试
-add_test(NAME Unit2Tests COMMAND zygl3_tests)
+add_test(NAME Unit2Tests COMMAND zygl_tests)
 

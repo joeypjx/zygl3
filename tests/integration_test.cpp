@@ -16,23 +16,23 @@
  #include <string>
  #include <sstream>
  #include <vector>
- #include "infrastructure/collectors/data_collector_service.h"
- #include "infrastructure/persistence/in_memory_chassis_repository.h"
- #include "infrastructure/persistence/in_memory_stack_repository.h"
- #include "infrastructure/api_client/qyw_api_client.h"
- #include "infrastructure/controller/resource_controller.h"
- #include "interfaces/http/alert_receiver_server.h"
- #include "interfaces/udp/resource_monitor_broadcaster.h"
-#include "domain/chassis.h"
-#include "domain/board.h"
-#include "domain/stack.h"
-#include "domain/service.h"
-#include "domain/task.h"
-#include "domain/value_objects.h"
+ #include "src/infrastructure/collectors/data_collector_service.h"
+ #include "src/infrastructure/persistence/in_memory_chassis_repository.h"
+ #include "src/infrastructure/persistence/in_memory_stack_repository.h"
+ #include "src/infrastructure/api_client/qyw_api_client.h"
+ #include "src/infrastructure/controller/resource_controller.h"
+ #include "src/interfaces/http/alert_receiver_server.h"
+ #include "src/interfaces/udp/resource_monitor_broadcaster.h"
+#include "src/domain/chassis.h"
+#include "src/domain/board.h"
+#include "src/domain/stack.h"
+#include "src/domain/service.h"
+#include "src/domain/task.h"
+#include "src/domain/value_objects.h"
 #include "unit_test/utils/test_data_generator.h"
 #include <cstring>
- #include "httplib.h"
- #include "json.hpp"
+ #include "cpp-httplib/httplib.h"
+ #include "nlohmann-json/json.hpp"
  
  using namespace app::infrastructure;
  using namespace app::domain;

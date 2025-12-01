@@ -10,14 +10,14 @@
 #include <thread>
 #include <atomic>
 #include <vector>
-#include "infrastructure/persistence/in_memory_chassis_repository.h"
-#include "infrastructure/persistence/in_memory_stack_repository.h"
-#include "domain/chassis.h"
-#include "domain/board.h"
-#include "domain/stack.h"
-#include "domain/service.h"
-#include "domain/task.h"
-#include "domain/value_objects.h"
+#include "src/infrastructure/persistence/in_memory_chassis_repository.h"
+#include "src/infrastructure/persistence/in_memory_stack_repository.h"
+#include "src/domain/chassis.h"
+#include "src/domain/board.h"
+#include "src/domain/stack.h"
+#include "src/domain/service.h"
+#include "src/domain/task.h"
+#include "src/domain/value_objects.h"
 
 using namespace app::infrastructure;
 using namespace app::domain;

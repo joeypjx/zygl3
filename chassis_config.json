@@ -189,4 +189,3 @@
     "ipPattern": "192.168.${chassisNumber}*2[/+1].(${slotNumber}-1[/-8])*32+5"
   }
 }
-

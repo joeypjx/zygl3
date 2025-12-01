@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include "infrastructure/controller/resource_controller.h"
+#include "src/infrastructure/controller/resource_controller.h"
 
 using namespace std;
 

@@ -50,10 +50,12 @@
     "interval_seconds": 10,
     "board_timeout_seconds": 120
   },
-  "topology": {
-    "max_chassis_count": 9,
-    "boards_per_chassis": 14,
-    "max_tasks_per_board": 8,
-    "ip_generation_pattern": "192.168.0.{chassis}00{slot}"
+  "logging": {
+    "log_dir": "/var/log/zygl",
+    "level": "info",
+    "enable_console": 1,
+    "enable_file": 1,
+    "max_file_size_mb": 10,
+    "max_files": 5
   }
 }

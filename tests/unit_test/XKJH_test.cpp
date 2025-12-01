@@ -10,16 +10,16 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
-#include "interfaces/udp/resource_monitor_broadcaster.h"
-#include "infrastructure/persistence/in_memory_chassis_repository.h"
-#include "infrastructure/persistence/in_memory_stack_repository.h"
-#include "infrastructure/api_client/qyw_api_client.h"
-#include "domain/chassis.h"
-#include "domain/board.h"
-#include "domain/stack.h"
-#include "domain/service.h"
-#include "domain/task.h"
-#include "domain/value_objects.h"
+#include "src/interfaces/udp/resource_monitor_broadcaster.h"
+#include "src/infrastructure/persistence/in_memory_chassis_repository.h"
+#include "src/infrastructure/persistence/in_memory_stack_repository.h"
+#include "src/infrastructure/api_client/qyw_api_client.h"
+#include "src/domain/chassis.h"
+#include "src/domain/board.h"
+#include "src/domain/stack.h"
+#include "src/domain/service.h"
+#include "src/domain/task.h"
+#include "src/domain/value_objects.h"
 #include "utils/test_data_generator.h"
 
 using namespace app::infrastructure;

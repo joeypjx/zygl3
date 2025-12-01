@@ -9,11 +9,11 @@
 #include <memory>
 #include <thread>
 #include <chrono>
-#include "infrastructure/collectors/data_collector_service.h"
-#include "infrastructure/persistence/in_memory_chassis_repository.h"
-#include "infrastructure/persistence/in_memory_stack_repository.h"
-#include "infrastructure/api_client/qyw_api_client.h"
-#include "domain/stack.h"
+#include "src/infrastructure/collectors/data_collector_service.h"
+#include "src/infrastructure/persistence/in_memory_chassis_repository.h"
+#include "src/infrastructure/persistence/in_memory_stack_repository.h"
+#include "src/infrastructure/api_client/qyw_api_client.h"
+#include "src/domain/stack.h"
 #include "utils/test_data_generator.h"
 
 using namespace app::infrastructure;
