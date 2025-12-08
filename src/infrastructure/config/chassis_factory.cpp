@@ -92,43 +92,48 @@ std::vector<ChassisConfig> ChassisFactory::LoadConfigsFromFile(const std::string
                         
                         // 读取板卡类型
                         // 0-计算板卡, 1-交换板卡, 2-电源板卡
-                        // 3-通用计算I型模块, 4-通用计算II型模块
-                        // 5-高性能计算I型模块, 6-高性能计算II型模块
-                        // 7-存储模块, 8-缓存模块, 9-SRIO模块, 10-以太网交换模块
+                        // 板卡类型映射：根据文档编号
+                        // 0-其他, 1-CPU通用计算模块A型, 2-CPU通用计算模块B型
+                        // 3-GPU I型高性能计算模块, 4-GPU II型高性能计算模块
+                        // 5-综合计算模块A型, 6-综合计算模块B型
+                        // 7-SRIO模块, 8-以太网交换模块, 9-缓存模块, 10-电源模块
                         int boardTypeInt = boardJson.value("boardType", 0);
                         switch (boardTypeInt) {
+                            case 0:
+                                boardConfig.boardType = app::domain::BoardType::Other;
+                                break;
                             case 1:
-                                boardConfig.boardType = app::domain::BoardType::Switch;
+                                boardConfig.boardType = app::domain::BoardType::CPUGeneralComputingA;
                                 break;
                             case 2:
-                                boardConfig.boardType = app::domain::BoardType::Power;
+                                boardConfig.boardType = app::domain::BoardType::CPUGeneralComputingB;
                                 break;
                             case 3:
-                                boardConfig.boardType = app::domain::BoardType::GeneralComputingI;
+                                boardConfig.boardType = app::domain::BoardType::GPUIHighPerformanceComputing;
                                 break;
                             case 4:
-                                boardConfig.boardType = app::domain::BoardType::GeneralComputingII;
+                                boardConfig.boardType = app::domain::BoardType::GPUIIHighPerformanceComputing;
                                 break;
                             case 5:
-                                boardConfig.boardType = app::domain::BoardType::HighPerformanceComputingI;
+                                boardConfig.boardType = app::domain::BoardType::IntegratedComputingA;
                                 break;
                             case 6:
-                                boardConfig.boardType = app::domain::BoardType::HighPerformanceComputingII;
+                                boardConfig.boardType = app::domain::BoardType::IntegratedComputingB;
                                 break;
                             case 7:
-                                boardConfig.boardType = app::domain::BoardType::Storage;
-                                break;
-                            case 8:
-                                boardConfig.boardType = app::domain::BoardType::Cache;
-                                break;
-                            case 9:
                                 boardConfig.boardType = app::domain::BoardType::SRIO;
                                 break;
-                            case 10:
+                            case 8:
                                 boardConfig.boardType = app::domain::BoardType::EthernetSwitch;
                                 break;
+                            case 9:
+                                boardConfig.boardType = app::domain::BoardType::Cache;
+                                break;
+                            case 10:
+                                boardConfig.boardType = app::domain::BoardType::Power;
+                                break;
                             default:
-                                boardConfig.boardType = app::domain::BoardType::Computing;
+                                boardConfig.boardType = app::domain::BoardType::Other;
                                 break;
                         }
                         

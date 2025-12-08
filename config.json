@@ -6,8 +6,8 @@
     "endpoints": {
       "boardinfo": "/api/v1/external/qyw/boardinfo",
       "stackinfo": "/api/v1/external/qyw/stackinfo",
-      "deploy": "/api/v1/external/qyw/deploy",
-      "undeploy": "/api/v1/external/qyw/undeploy",
+      "deploy": "/api/v1/stacks/labels/deploy",
+      "undeploy": "/api/v1/stacks/labels/undeploy",
       "heartbeat": "/api/v1/sys-config/client/up"
     },
     "timeout": 30,
@@ -51,9 +51,9 @@
     "board_timeout_seconds": 120
   },
   "logging": {
-    "log_dir": "/var/log/zygl",
-    "level": "info",
-    "enable_console": 1,
+    "log_dir": "./logs",
+    "level": "debug",
+    "enable_console": 0,
     "enable_file": 1,
     "max_file_size_mb": 10,
     "max_files": 5

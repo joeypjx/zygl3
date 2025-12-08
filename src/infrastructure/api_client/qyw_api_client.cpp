@@ -45,8 +45,9 @@ std::vector<BoardInfoResponse> QywApiClient::GetBoardInfo() {
     return result;
 }
 
-std::vector<StackInfoResponse> QywApiClient::GetStackInfo() {
+std::vector<StackInfoResponse> QywApiClient::GetStackInfo(bool& success) {
     std::vector<StackInfoResponse> result;
+    success = false;
     
     // 业务链路详情接口改为POST请求
     json requestBody;  // POST请求体可以为空
@@ -57,14 +58,20 @@ std::vector<StackInfoResponse> QywApiClient::GetStackInfo() {
     if (res && res->status == 200) {
         try {
             result = ParseStackInfoResponse(res->body);
+            success = true;  // API调用成功
             spdlog::info("成功获取业务链路信息，共 {} 条", result.size());
         } catch (const std::exception& e) {
             spdlog::error("解析业务链路信息失败: {}", e.what());
+            // success 保持为 false，表示解析失败
+            spdlog::debug("GetStackInfo: 解析失败，success保持为false");
         }
     } else {
         spdlog::error("获取业务链路信息失败，状态码: {}", (res ? res->status : -1));
+        // success 保持为 false，表示API调用失败
+        spdlog::debug("GetStackInfo: API调用失败，success保持为false");
     }
     
+    spdlog::debug("GetStackInfo: 返回前，success={}, result.size()={}", success, result.size());
     return result;
 }
 

@@ -76,6 +76,11 @@ private:
     void PrintChassisDetail(int chassisNumber);
 
     /**
+     * @brief 打印指定任务的详细信息
+     */
+    void PrintTaskDetail(int chassisNumber, int slotNumber, int taskIndex);
+
+    /**
      * @brief 打印所有机箱的完整信息
      */
     void PrintAllChassisFullInfo();

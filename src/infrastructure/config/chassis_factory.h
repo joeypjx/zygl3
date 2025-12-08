@@ -63,12 +63,14 @@ public:
      *       这些类型不能简单根据槽位号判断，必须从配置文件指定。
      */
     static app::domain::BoardType DetermineBoardType(int slotNumber) {
-        if (slotNumber == 6 || slotNumber == 7) {
-            return app::domain::BoardType::Switch;   // 交换板卡
+        if (slotNumber == 6) {
+            return app::domain::BoardType::SRIO;   // SRIO模块
+        } else if (slotNumber == 7) {
+            return app::domain::BoardType::EthernetSwitch;   // 以太网交换模块
         } else if (slotNumber == 13 || slotNumber == 14) {
-            return app::domain::BoardType::Power;    // 电源板卡
+            return app::domain::BoardType::Power;    // 电源模块
         } else {
-            return app::domain::BoardType::Computing; // 计算板卡（默认）
+            return app::domain::BoardType::CPUGeneralComputingA; // CPU通用计算模块A型（默认）
         }
     }
 

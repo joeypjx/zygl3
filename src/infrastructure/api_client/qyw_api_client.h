@@ -142,9 +142,10 @@ public:
 
     /**
      * @brief 获取所有业务链路详情
+     * @param success 输出参数，指示API调用是否成功
      * @return 业务链路信息列表
      */
-    std::vector<StackInfoResponse> GetStackInfo();
+    std::vector<StackInfoResponse> GetStackInfo(bool& success);
 
     /**
      * @brief 批量启用业务链路

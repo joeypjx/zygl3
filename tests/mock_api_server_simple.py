@@ -5,9 +5,11 @@ Mock API Server for /api/v1/external/qyw/boardinfo and /api/v1/external/qyw/stac
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import json
 import random
 from urllib.parse import urlparse
+import threading
 
 
 def generate_board_ip_address(chassis_num, board_num):
@@ -60,21 +62,27 @@ def generate_mock_stack_data(stack_labels=None):
     
     if stack_labels and len(stack_labels) > 0:
         # 根据传入的标签名称生成对应的stacks
-        for stack_idx, label_name in enumerate(stack_labels, 1):
-            stack = {
-                "stackName": f"Stack_{stack_idx}",
-                "stackUUID": f"stack-uuid-{stack_idx}",
-                "stackLabelInfos": [
-                    {
-                        "stackLabelName": label_name,  # 使用传入的标签名称
-                        "stackLabelUUID": f"label-uuid-{stack_idx}"  # 生成对应的UUID
-                    }
-                ],
-                "stackDeployStatus": 0,  # 初始状态为未部署
-                "stackRunningStatus": random.choice([1, 2]),  # 1-正常运行；2-异常运行
-                "serviceInfos": []
-            }
-            stacks.append(stack)
+        # 一个标签可以对应多个stack（每个标签生成2-4个stacks）
+        stack_counter = 1
+        for label_idx, label_name in enumerate(stack_labels, 1):
+            # 为每个标签生成多个stacks（2-4个）
+            stacks_per_label = random.randint(2, 4)
+            for stack_in_label_idx in range(1, stacks_per_label + 1):
+                stack = {
+                    "stackName": f"Stack_{stack_counter}",
+                    "stackUUID": f"stack-uuid-{stack_counter}",
+                    "stackLabelInfos": [
+                        {
+                            "stackLabelName": label_name,  # 使用传入的标签名称
+                            "stackLabelUUID": f"label-uuid-{label_idx}"  # 同一标签的所有stacks共享同一个UUID
+                        }
+                    ],
+                    "stackDeployStatus": 0,  # 初始状态为未部署
+                    "stackRunningStatus": 1,  # 固定为正常运行（1）
+                    "serviceInfos": []
+                }
+                stacks.append(stack)
+                stack_counter += 1
     else:
         # 如果没有传入标签，生成多个随机的业务链路（向后兼容）
         for stack_idx in range(1, 6):  # 5个业务链路
@@ -89,7 +97,7 @@ def generate_mock_stack_data(stack_labels=None):
                     for label_idx in range(1, random.randint(2, 4))  # 1-3个标签
                 ],
                 "stackDeployStatus": random.choice([0, 1]),  # 0-未部署；1-已部署
-                "stackRunningStatus": random.choice([1, 2]),  # 1-正常运行；2-异常运行
+                "stackRunningStatus": 1,  # 固定为正常运行（1）
                 "serviceInfos": []
             }
             stacks.append(stack)
@@ -102,7 +110,7 @@ def generate_mock_stack_data(stack_labels=None):
             service = {
                 "serviceName": f"Service_{stack_idx}_{service_idx}",
                 "serviceUUID": f"service-uuid-{stack_idx}-{service_idx}",
-                "serviceStatus": random.choice([0, 1, 2, 3]),  # 0-已停用；1-已启用；2-运行正常；3-运行异常
+                "serviceStatus": 2,  # 固定为运行正常（2）
                 "serviceType": random.choice([0, 1, 2]),  # 0-普通；1-公共链路引用；2-公共链路自有
                 "taskInfos": []
             }
@@ -126,7 +134,7 @@ def generate_mock_stack_data(stack_labels=None):
                     
                     task = {
                         "taskID": f"task-{stack_idx}-{service_idx}-{task_idx+1}",
-                        "taskStatus": random.choice([1, 2, 3, 0]),  # 1-运行中, 2-已完成, 3-异常, 0-其他
+                        "taskStatus": 1,  # 固定为运行中（1）
                         "cpuCores": cpu_cores,
                         "cpuUsed": cpu_used,
                         "cpuUsage": cpu_usage,
@@ -162,14 +170,48 @@ def generate_mock_board_data_from_stacks(stacks):
         chassis_name = f"Chassis_{chassis_num}"
         for board_num in range(1, 15):  # 每个机箱14个板卡 (1-14)
             key = (chassis_num, board_num)
+            
+            # 根据槽位号确定板卡类型
+            # 槽位6：SRIO模块（7），槽位7：以太网交换模块（8），槽位13-14：电源模块（10）
+            if board_num == 6:
+                board_type = 7  # SRIO模块
+            elif board_num == 7:
+                board_type = 8  # 以太网交换模块
+            elif board_num == 13 or board_num == 14:
+                board_type = 10  # 电源模块
+            else:
+                # 槽位1-5和8-12：根据槽位号分配不同的计算模块类型（与chassis_config.json一致）
+                if board_num == 1:
+                    board_type = 1  # CPUGeneralComputingA
+                elif board_num == 2:
+                    board_type = 2  # CPUGeneralComputingB
+                elif board_num == 3:
+                    board_type = 3  # GPUIHighPerformanceComputing
+                elif board_num == 4:
+                    board_type = 4  # GPUIIHighPerformanceComputing
+                elif board_num == 5:
+                    board_type = 5  # IntegratedComputingA
+                elif board_num == 8:
+                    board_type = 6  # IntegratedComputingB
+                elif board_num == 9:
+                    board_type = 1  # CPUGeneralComputingA
+                elif board_num == 10:
+                    board_type = 2  # CPUGeneralComputingB
+                elif board_num == 11:
+                    board_type = 3  # GPUIHighPerformanceComputing
+                elif board_num == 12:
+                    board_type = 4  # GPUIIHighPerformanceComputing
+                else:
+                    board_type = 1  # 默认CPUGeneralComputingA
+            
             boards_dict[key] = {
                 "chassisName": chassis_name,
                 "chassisNumber": chassis_num,
                 "boardName": f"Board_{chassis_num}_{board_num}",
                 "boardNumber": board_num,
-                "boardType": random.choice([0, 1, 2, 3, 4, 5, 6]),  # 板卡类型
+                "boardType": board_type,
                 "boardAddress": generate_board_ip_address(chassis_num, board_num),
-                "boardStatus": random.choice([0, 1]),  # 0-正常, 1-异常
+                "boardStatus": 0,  # 固定为正常（0）
                 "voltage": round(random.uniform(11.5, 13.5), 2),
                 "current": round(random.uniform(1.5, 3.0), 2),
                 "temperature": round(random.uniform(35.0, 55.0), 2),
@@ -228,14 +270,48 @@ def generate_mock_board_data():
             chassis_name = f"Chassis_{chassis_num}"
             for board_num in range(1, 15):  # 每个机箱14个板卡 (1-14)
                 key = (chassis_num, board_num)
+                
+                # 根据槽位号确定板卡类型
+                # 槽位6：SRIO模块（7），槽位7：以太网交换模块（8），槽位13-14：电源模块（10）
+                if board_num == 6:
+                    board_type = 7  # SRIO模块
+                elif board_num == 7:
+                    board_type = 8  # 以太网交换模块
+                elif board_num == 13 or board_num == 14:
+                    board_type = 10  # 电源模块
+                else:
+                    # 槽位1-5和8-12：根据槽位号分配不同的计算模块类型（与chassis_config.json一致）
+                    if board_num == 1:
+                        board_type = 1  # CPUGeneralComputingA
+                    elif board_num == 2:
+                        board_type = 2  # CPUGeneralComputingB
+                    elif board_num == 3:
+                        board_type = 3  # GPUIHighPerformanceComputing
+                    elif board_num == 4:
+                        board_type = 4  # GPUIIHighPerformanceComputing
+                    elif board_num == 5:
+                        board_type = 5  # IntegratedComputingA
+                    elif board_num == 8:
+                        board_type = 6  # IntegratedComputingB
+                    elif board_num == 9:
+                        board_type = 1  # CPUGeneralComputingA
+                    elif board_num == 10:
+                        board_type = 2  # CPUGeneralComputingB
+                    elif board_num == 11:
+                        board_type = 3  # GPUIHighPerformanceComputing
+                    elif board_num == 12:
+                        board_type = 4  # GPUIIHighPerformanceComputing
+                    else:
+                        board_type = 1  # 默认CPUGeneralComputingA
+                
                 boards_dict[key] = {
                     "chassisName": chassis_name,
                     "chassisNumber": chassis_num,
                     "boardName": f"Board_{chassis_num}_{board_num}",
                     "boardNumber": board_num,
-                    "boardType": random.choice([0, 1, 2, 3, 4, 5, 6]),
+                    "boardType": board_type,
                     "boardAddress": generate_board_ip_address(chassis_num, board_num),
-                    "boardStatus": random.choice([0, 1]),
+                    "boardStatus": 0,  # 固定为正常（0）
                     "voltage": round(random.uniform(11.5, 13.5), 2),
                     "current": round(random.uniform(1.5, 3.0), 2),
                     "temperature": round(random.uniform(35.0, 55.0), 2),
@@ -258,6 +334,11 @@ def generate_mock_board_data():
         _shared_data["boards"] = generate_mock_board_data_from_stacks(_shared_data["stacks"])
     
     return _shared_data["boards"]
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    """支持多线程的HTTP服务器"""
+    daemon_threads = True  # 设置为守护线程，主程序退出时自动退出
 
 
 class APIHandler(BaseHTTPRequestHandler):
@@ -378,46 +459,38 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
                 return
             
-            # 如果 stacks 为空，根据传入的标签名称创建新的 stackinfo 数据
-            if not _shared_data["stacks"]:
-                _shared_data["stacks"] = generate_mock_stack_data(stack_labels)
-                _shared_data["boards"] = generate_mock_board_data_from_stacks(_shared_data["stacks"])
+            # 每次 deploy 时，先清空当前的 stacks，再根据传入的标签名称生成新的 stacks
+            # 先生成新的数据，再一次性替换，避免在清空和生成之间被其他请求读取到空数据
+            new_stacks = generate_mock_stack_data(stack_labels)
+            _shared_data["stacks"] = new_stacks
+            _shared_data["boards"] = generate_mock_board_data_from_stacks(_shared_data["stacks"])
             
             stacks = _shared_data["stacks"]
             
-            # 根据标签名称查找业务链路
+            # 根据标签名称查找业务链路并部署
+            # 一个标签可以对应多个stack，需要部署所有匹配的stacks
             success_stacks = []
             failure_stacks = []
             
             for label_name in stack_labels:
-                found = False
+                found_any = False
+                # 遍历所有stacks，找到所有包含该标签的stacks
                 for stack in stacks:
                     # 检查业务链路是否包含该标签名称
                     for label_info in stack.get("stackLabelInfos", []):
                         if label_info.get("stackLabelName") == label_name:
-                            found = True
-                            # 模拟部署：80%成功率
-                            if random.random() < 0.8:
-                                # 部署成功：更新部署状态
-                                stack["stackDeployStatus"] = 1
-                                success_stacks.append({
-                                    "stackName": stack["stackName"],
-                                    "stackUUID": stack["stackUUID"],
-                                    "message": f"业务链路 {stack['stackName']} 部署成功"
-                                })
-                            else:
-                                # 部署失败
-                                failure_stacks.append({
-                                    "stackName": stack["stackName"],
-                                    "stackUUID": stack["stackUUID"],
-                                    "message": f"业务链路 {stack['stackName']} 部署失败：资源不足"
-                                })
-                            break
-                    if found:
-                        break
+                            found_any = True
+                            # 部署成功：更新部署状态
+                            stack["stackDeployStatus"] = 1
+                            success_stacks.append({
+                                "stackName": stack["stackName"],
+                                "stackUUID": stack["stackUUID"],
+                                "message": f"业务链路 {stack['stackName']} 部署成功"
+                            })
+                            break  # 找到匹配的标签后，跳出内层循环继续查找下一个stack
                 
-                if not found:
-                    # 未找到对应的业务链路
+                if not found_any:
+                    # 未找到对应的业务链路（理论上不应该发生，因为是根据标签生成的）
                     failure_stacks.append({
                         "stackName": "",
                         "stackUUID": "",
@@ -506,39 +579,30 @@ class APIHandler(BaseHTTPRequestHandler):
             stacks = _shared_data["stacks"] if _shared_data["stacks"] else []
             
             # 根据标签名称查找并移除业务链路
+            # 一个标签可以对应多个stack，需要停用所有匹配的stacks
             success_stacks = []
             failure_stacks = []
             stacks_to_remove = []  # 记录要移除的 stack UUID
             
             for label_name in stack_labels:
-                found = False
+                found_any = False
+                # 遍历所有stacks，找到所有包含该标签的stacks
                 for stack in stacks:
                     # 检查业务链路是否包含该标签名称
                     for label_info in stack.get("stackLabelInfos", []):
                         if label_info.get("stackLabelName") == label_name:
-                            found = True
-                            # 模拟停用：80%成功率
-                            if random.random() < 0.8:
-                                # 停用成功：标记为移除
-                                if stack["stackUUID"] not in stacks_to_remove:
-                                    stacks_to_remove.append(stack["stackUUID"])
-                                    success_stacks.append({
-                                        "stackName": stack["stackName"],
-                                        "stackUUID": stack["stackUUID"],
-                                        "message": f"业务链路 {stack['stackName']} 停用成功"
-                                    })
-                            else:
-                                # 停用失败
-                                failure_stacks.append({
+                            found_any = True
+                            # 停用成功：标记为移除
+                            if stack["stackUUID"] not in stacks_to_remove:
+                                stacks_to_remove.append(stack["stackUUID"])
+                                success_stacks.append({
                                     "stackName": stack["stackName"],
                                     "stackUUID": stack["stackUUID"],
-                                    "message": f"业务链路 {stack['stackName']} 停用失败：资源占用"
+                                    "message": f"业务链路 {stack['stackName']} 停用成功"
                                 })
-                            break
-                    if found:
-                        break
+                            break  # 找到匹配的标签后，跳出内层循环继续查找下一个stack
                 
-                if not found:
+                if not found_any:
                     # 未找到对应的业务链路
                     failure_stacks.append({
                         "stackName": "",
@@ -615,13 +679,26 @@ class APIHandler(BaseHTTPRequestHandler):
     
     def log_message(self, format, *args):
         """自定义日志输出"""
-        print(f"[{self.address_string()}] {format % args}")
+        thread_id = threading.current_thread().ident
+        print(f"[{self.address_string()}] [Thread-{thread_id}] {format % args}")
+    
+    def handle_one_request(self):
+        """处理单个请求，添加异常处理"""
+        try:
+            super().handle_one_request()
+        except Exception as e:
+            print(f"[ERROR] 处理请求时发生异常: {e}")
+            try:
+                self.send_error(500, f"Internal Server Error: {str(e)}")
+            except:
+                pass  # 如果已经发送了响应，忽略错误
 
 
 def run_server(port=8080):
     """启动服务器"""
     server_address = ('0.0.0.0', port)
-    httpd = HTTPServer(server_address, APIHandler)
+    httpd = ThreadingHTTPServer(server_address, APIHandler)
+    httpd.timeout = 30  # 设置超时时间（秒）
     
     print("=" * 60)
     print("Mock API Server 启动中...")

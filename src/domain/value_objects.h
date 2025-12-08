@@ -7,19 +7,20 @@ namespace app::domain {
 
 /**
  * @brief 板卡类型
+ * 对应文档中的板卡类型编号
  */
 enum class BoardType : int8_t {
-    Computing = 0,              // 计算板卡 (通用，可运行任务)
-    Switch = 1,                 // 交换板卡 (以太网交换模块)
-    Power = 2,                   // 电源板卡 (电源模块)
-    GeneralComputingI = 3,       // 通用计算I型模块 (可运行任务)
-    GeneralComputingII = 4,      // 通用计算II型模块 (可运行任务)
-    HighPerformanceComputingI = 5, // 高性能计算I型模块 (可运行任务)
-    HighPerformanceComputingII = 6, // 高性能计算II型模块 (可运行任务)
-    Storage = 7,                 // 存储模块 (不可运行任务)
-    Cache = 8,                   // 缓存模块 (不可运行任务)
-    SRIO = 9,                    // SRIO模块 (不可运行任务)
-    EthernetSwitch = 10          // 以太网交换模块 (与Switch相同，不可运行任务)
+    Other = 0,                          // 0、其他
+    CPUGeneralComputingA = 1,           // 1、CPU通用计算模块A型 (可运行任务)
+    CPUGeneralComputingB = 2,           // 2、CPU通用计算模块B型 (可运行任务)
+    GPUIHighPerformanceComputing = 3,   // 3、GPU I型高性能计算模块 (可运行任务)
+    GPUIIHighPerformanceComputing = 4,   // 4、GPU II型高性能计算模块 (可运行任务)
+    IntegratedComputingA = 5,            // 5、综合计算模块A型 (可运行任务)
+    IntegratedComputingB = 6,            // 6、综合计算模块B型 (可运行任务)
+    SRIO = 7,                            // 7、SRIO模块 (不可运行任务)
+    EthernetSwitch = 8,                  // 8、以太网交换模块 (不可运行任务)
+    Cache = 9,                           // 9、缓存模块 (不可运行任务)
+    Power = 10                           // 10、电源模块 (不可运行任务)
 };
 
 /**

@@ -156,11 +156,22 @@ void DataCollectorService::CollectStackInfo() {
     spdlog::info("  采集业务链路信息...");
     
     // 调用API获取业务链路信息
-    auto stackInfos = m_apiClient->GetStackInfo();
+    bool apiSuccess = false;
+    auto stackInfos = m_apiClient->GetStackInfo(apiSuccess);
+    
+    // 调试日志：确认 apiSuccess 的值
+    spdlog::info("  API调用结果: success={}, stackInfos.size()={}", apiSuccess, stackInfos.size());
+    
+    // 只有在API调用成功时才更新repository
+    // 如果API调用失败，保留现有数据，避免因网络问题等临时故障导致数据丢失
+    if (!apiSuccess) {
+        spdlog::warn("  API调用失败，保留现有业务链路数据");
+        return;
+    }
     
     if (stackInfos.empty()) {
-        spdlog::info("  业务链路信息为空，可能是API未返回数据");
-        // 清空现有的stacks
+        spdlog::info("  业务链路信息为空（API调用成功但无数据），清空repository");
+        // API调用成功但返回空列表，清空现有的stacks
         m_stackRepo->Clear();
         return;
     }

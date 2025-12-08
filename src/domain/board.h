@@ -130,7 +130,7 @@ private:
     std::string m_boardAddress;              // 板卡IP地址
     std::string m_boardName;                 // 板卡名称
     int m_boardNumber = 0;                   // 板卡槽位号
-    BoardType m_boardType = BoardType::Computing; // 板卡类型
+    BoardType m_boardType = BoardType::Other; // 板卡类型
     BoardOperationalStatus m_status = BoardOperationalStatus::Unknown; // 板卡运行状态
     
     // 板卡监控数据

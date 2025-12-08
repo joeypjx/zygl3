@@ -81,25 +81,36 @@ void CliService::Run() {
 }
 
 void CliService::ProcessCommand(const std::string& command) {
-    if (command == "help" || command == "h") {
+    if (command.empty()) {
+        return;
+    }
+    
+    std::istringstream iss(command);
+    std::string cmd;
+    iss >> cmd;
+    
+    if (cmd == "help" || cmd == "h" || cmd == "?") {
         PrintHelp();
-    } else if (command == "quit" || command == "exit" || command == "q") {
+    } else if (cmd == "quit" || cmd == "exit" || cmd == "q") {
         spdlog::info("退出CLI服务...");
         m_running = false;
-    } else if (command == "list" || command == "ls") {
-        PrintAllChassisOverview();
-    } else if (command == "all" || command == "a") {
+    } else if (cmd == "chassis" || cmd == "c") {
         PrintAllChassisFullInfo();
-    } else if (command == "stack" || command == "stacks") {
-        PrintAllStacksOverview();
-    } else if (command == "stackall" || command == "stacksall") {
+    } else if (cmd == "stack" || cmd == "s") {
         PrintAllStacksFullInfo();
-    } else if (command.length() >= 6 && command.substr(0, 6) == "deploy") {
+    } else if (cmd == "task" || cmd == "t") {
+        // 解析 "task <机箱号> <槽位> <任务序号>" 命令
+        int chassisNumber, slotNumber, taskIndex;
+        iss >> chassisNumber >> slotNumber >> taskIndex;
+        if (iss.fail() || chassisNumber <= 0 || slotNumber <= 0 || taskIndex <= 0) {
+            spdlog::warn("命令格式错误，请使用: task <机箱号> <槽位> <任务序号>");
+            spdlog::info("示例: task 1 3 1 或 t 1 3 1");
+        } else {
+            PrintTaskDetail(chassisNumber, slotNumber, taskIndex);
+        }
+    } else if (cmd == "deploy" || cmd == "d") {
         // 解析 "deploy <标签1> [标签2] ..." 命令
         std::vector<std::string> labels;
-        std::istringstream iss(command);
-        std::string cmd;
-        iss >> cmd;
         std::string label;
         while (iss >> label) {
             labels.push_back(label);
@@ -109,12 +120,9 @@ void CliService::ProcessCommand(const std::string& command) {
         } else {
             DeployStacks(labels);
         }
-    } else if (command.length() >= 8 && command.substr(0, 8) == "undeploy") {
+    } else if (cmd == "undeploy" || cmd == "u") {
         // 解析 "undeploy <标签1> [标签2] ..." 命令
         std::vector<std::string> labels;
-        std::istringstream iss(command);
-        std::string cmd;
-        iss >> cmd;
         std::string label;
         while (iss >> label) {
             labels.push_back(label);
@@ -124,48 +132,27 @@ void CliService::ProcessCommand(const std::string& command) {
         } else {
             UndeployStacks(labels);
         }
-    } else if (command.length() >= 5 && command.substr(0, 5) == "show ") {
-        // 解析 "show <机箱号>" 或 "show stack <UUID>" 命令
-        std::istringstream iss(command);
-        std::string cmd, type;
-        iss >> cmd >> type;
-        
-        if (type == "stack") {
-            std::string stackUUID;
-            iss >> stackUUID;
-            if (!stackUUID.empty()) {
-                PrintStackDetail(stackUUID);
-            } else {
-                spdlog::warn("请提供业务链路的UUID");
-            }
-        } else {
-            // 尝试解析为机箱号
-            iss.seekg(5);  // 回到"show "之后
-            int chassisNumber;
-            iss >> chassisNumber;
-            PrintChassisDetail(chassisNumber);
-        }
     } else {
         spdlog::warn("未知命令: {}", command);
-        spdlog::info("输入 'help' 查看可用命令");
+        spdlog::info("输入 'help' 或 'h' 查看可用命令");
     }
 }
 
 void CliService::PrintHelp() {
     std::cout << "\n=== 可用命令 ===" << std::endl;
-    std::cout << "机箱相关:" << std::endl;
-    std::cout << "  list, ls              - 显示所有机箱概览" << std::endl;
-    std::cout << "  all, a                - 显示所有机箱完整信息" << std::endl;
-    std::cout << "  show <机箱号>         - 显示指定机箱的详细信息" << std::endl;
-    std::cout << "业务链路相关:" << std::endl;
-    std::cout << "  stack, stacks         - 显示所有业务链路概览" << std::endl;
-    std::cout << "  stackall, stacksall   - 显示所有业务链路完整信息" << std::endl;
-    std::cout << "  show stack <UUID>     - 显示指定业务链路的详细信息" << std::endl;
-    std::cout << "  deploy <标签...>      - 启动指定标签的业务链路" << std::endl;
-    std::cout << "  undeploy <标签...>    - 停止指定标签的业务链路" << std::endl;
-    std::cout << "其他:" << std::endl;
-    std::cout << "  help, h               - 显示此帮助信息" << std::endl;
+    std::cout << "  chassis, c            - 显示所有机箱完整信息" << std::endl;
+    std::cout << "  stack, s              - 显示所有业务链路完整信息" << std::endl;
+    std::cout << "  task, t <机箱> <槽位> <序号>  - 显示指定任务的详细信息" << std::endl;
+    std::cout << "  deploy, d <标签...>   - 启动指定标签的业务链路" << std::endl;
+    std::cout << "  undeploy, u <标签...> - 停止指定标签的业务链路" << std::endl;
+    std::cout << "  help, h, ?            - 显示此帮助信息" << std::endl;
     std::cout << "  quit, exit, q         - 退出CLI服务" << std::endl;
+    std::cout << "\n示例:" << std::endl;
+    std::cout << "  c                     - 显示所有机箱信息" << std::endl;
+    std::cout << "  s                     - 显示所有业务链路信息" << std::endl;
+    std::cout << "  t 1 3 1               - 显示机箱1槽位3的第1个任务" << std::endl;
+    std::cout << "  d label1 label2       - 启动标签为label1和label2的业务链路" << std::endl;
+    std::cout << "  u label1              - 停止标签为label1的业务链路" << std::endl;
 }
 
 void CliService::PrintAllChassisOverview() {
@@ -270,6 +257,133 @@ void CliService::PrintChassisDetail(int chassisNumber) {
     PrintSeparator();
 }
 
+void CliService::PrintTaskDetail(int chassisNumber, int slotNumber, int taskIndex) {
+    // 查找机箱
+    auto chassis = m_chassisRepo->FindByNumber(chassisNumber);
+    if (!chassis) {
+        spdlog::warn("未找到机箱号: {}", chassisNumber);
+        return;
+    }
+    
+    // 检查槽位号是否有效
+    const auto& boards = chassis->GetAllBoards();
+    if (slotNumber < 1 || static_cast<size_t>(slotNumber) > boards.size()) {
+        spdlog::warn("槽位号 {} 无效，有效范围: 1-{}", slotNumber, boards.size());
+        return;
+    }
+    
+    // 获取板卡（槽位从1开始，数组索引从0开始）
+    const auto& board = boards[slotNumber - 1];
+    const auto& tasks = board.GetTasks();
+    
+    // 检查任务序号是否有效
+    if (taskIndex < 1 || static_cast<size_t>(taskIndex) > tasks.size()) {
+        spdlog::warn("任务序号 {} 无效，该板卡共有 {} 个任务", taskIndex, tasks.size());
+        return;
+    }
+    
+    // 获取任务（任务序号从1开始，数组索引从0开始）
+    const auto& task = tasks[taskIndex - 1];
+    
+    std::cout << "\n=== 任务详细信息 ===" << std::endl;
+    PrintSeparator();
+    
+    // 基本信息
+    std::cout << "任务ID: " << task.taskID << std::endl;
+    std::cout << "任务状态: " << TaskStatusToString(task.taskStatus) << std::endl;
+    std::cout << "服务名称: " << task.serviceName << std::endl;
+    std::cout << "服务UUID: " << task.serviceUUID << std::endl;
+    std::cout << "业务链路名称: " << task.stackName << std::endl;
+    std::cout << "业务链路UUID: " << task.stackUUID << std::endl;
+    
+    // 位置信息
+    std::cout << "\n位置信息:" << std::endl;
+    std::cout << "  机箱: " << chassis->GetChassisName() << " (机箱号: " << chassisNumber << ")" << std::endl;
+    std::cout << "  板卡: " << board.GetBoardName() << " (槽位: " << slotNumber << ")" << std::endl;
+    std::cout << "  板卡IP: " << board.GetAddress() << std::endl;
+    std::cout << "  板卡类型: " << BoardTypeToString(board.GetBoardType()) << std::endl;
+    
+    // 从业务链路中查找任务以获取资源信息
+    auto stack = m_stackRepo->FindByUUID(task.stackUUID);
+    if (stack) {
+        const auto& services = stack->GetAllServices();
+        auto serviceIt = services.find(task.serviceUUID);
+        if (serviceIt != services.end()) {
+            const auto& service = serviceIt->second;
+            const auto& serviceTasks = service.GetAllTasks();
+            auto taskIt = serviceTasks.find(task.taskID);
+            if (taskIt != serviceTasks.end()) {
+                const auto& taskWithResources = taskIt->second;
+                const auto& resources = taskWithResources.GetResources();
+                
+                std::cout << "\n资源使用情况:" << std::endl;
+                
+                // CPU信息
+                if (resources.cpuCores > 0 || resources.cpuUsed > 0 || resources.cpuUsage > 0) {
+                    std::cout << "  CPU:" << std::endl;
+                    if (resources.cpuCores > 0) {
+                        std::cout << "    总量: " << std::fixed << std::setprecision(2) 
+                                  << resources.cpuCores << " 核" << std::endl;
+                    }
+                    if (resources.cpuUsed > 0) {
+                        std::cout << "    使用量: " << std::fixed << std::setprecision(2) 
+                                  << resources.cpuUsed << " 核" << std::endl;
+                    }
+                    if (resources.cpuUsage > 0) {
+                        std::cout << "    使用率: " << std::fixed << std::setprecision(1) 
+                                  << resources.cpuUsage << "%" << std::endl;
+                    }
+                }
+                
+                // 内存信息
+                if (resources.memorySize > 0 || resources.memoryUsed > 0 || resources.memoryUsage > 0) {
+                    std::cout << "  内存:" << std::endl;
+                    if (resources.memorySize > 0) {
+                        std::cout << "    总量: " << std::fixed << std::setprecision(2) 
+                                  << resources.memorySize << " MB" << std::endl;
+                    }
+                    if (resources.memoryUsed > 0) {
+                        std::cout << "    使用量: " << std::fixed << std::setprecision(2) 
+                                  << resources.memoryUsed << " MB" << std::endl;
+                    }
+                    if (resources.memoryUsage > 0) {
+                        std::cout << "    使用率: " << std::fixed << std::setprecision(1) 
+                                  << resources.memoryUsage << "%" << std::endl;
+                    }
+                }
+                
+                // 网络信息
+                if (resources.netReceive > 0 || resources.netSent > 0) {
+                    std::cout << "  网络:" << std::endl;
+                    if (resources.netReceive > 0) {
+                        std::cout << "    接收流量: " << std::fixed << std::setprecision(2) 
+                                  << resources.netReceive << " MB/s" << std::endl;
+                    }
+                    if (resources.netSent > 0) {
+                        std::cout << "    发送流量: " << std::fixed << std::setprecision(2) 
+                                  << resources.netSent << " MB/s" << std::endl;
+                    }
+                }
+                
+                // GPU信息
+                if (resources.gpuMemUsed > 0) {
+                    std::cout << "  GPU显存:" << std::endl;
+                    std::cout << "    使用量: " << std::fixed << std::setprecision(2) 
+                              << resources.gpuMemUsed << " GB" << std::endl;
+                }
+            } else {
+                std::cout << "\n资源使用情况: 未找到资源信息" << std::endl;
+            }
+        } else {
+            std::cout << "\n资源使用情况: 未找到服务信息" << std::endl;
+        }
+    } else {
+        std::cout << "\n资源使用情况: 未找到业务链路信息" << std::endl;
+    }
+    
+    PrintSeparator();
+}
+
 void CliService::PrintAllChassisFullInfo() {
     auto allChassis = m_chassisRepo->GetAll();
     
@@ -279,22 +393,122 @@ void CliService::PrintAllChassisFullInfo() {
     }
     
     std::cout << "\n=== 所有机箱完整信息 ===" << std::endl;
+    std::cout << "共 " << allChassis.size() << " 个机箱" << std::endl;
+    PrintSeparator();
     
+    // 表头
+    std::cout << std::left 
+              << std::setw(8) << "机箱号"
+              << std::setw(20) << "机箱名称"
+              << std::setw(6) << "槽位"
+              << std::setw(18) << "IP地址"
+              << std::setw(28) << "板卡类型"
+              << std::setw(10) << "状态"
+              << std::setw(8) << "任务数"
+              << std::setw(12) << "电压(V)"
+              << std::setw(10) << "电流(A)"
+              << std::setw(10) << "温度(°C)"
+              << std::endl;
+    PrintSeparator();
+    
+    // 遍历所有机箱和板卡
     for (const auto& chassis : allChassis) {
         if (!chassis) continue;
-        PrintChassisDetail(chassis->GetChassisNumber());
-        std::cout << std::endl;
+        
+        const auto& boards = chassis->GetAllBoards();
+        for (size_t i = 0; i < boards.size(); ++i) {
+            const auto& board = boards[i];
+            int slotNumber = static_cast<int>(i + 1);
+            
+            std::cout << std::left 
+                      << std::setw(8) << chassis->GetChassisNumber()
+                      << std::setw(20) << chassis->GetChassisName()
+                      << std::setw(6) << slotNumber
+                      << std::setw(18) << board.GetAddress()
+                      << std::setw(28) << BoardTypeToString(board.GetBoardType())
+                      << std::setw(10) << BoardStatusToString(board.GetStatus())
+                      << std::setw(8) << board.GetTasks().size();
+            
+            // 传感器信息
+            if (board.GetVoltage() > 0) {
+                std::cout << std::fixed << std::setprecision(2) << std::setw(12) << board.GetVoltage();
+            } else {
+                std::cout << std::setw(12) << "-";
+            }
+            
+            if (board.GetCurrent() > 0) {
+                std::cout << std::fixed << std::setprecision(2) << std::setw(10) << board.GetCurrent();
+            } else {
+                std::cout << std::setw(10) << "-";
+            }
+            
+            if (board.GetTemperature() > 0) {
+                std::cout << std::fixed << std::setprecision(1) << std::setw(10) << board.GetTemperature();
+            } else {
+                std::cout << std::setw(10) << "-";
+            }
+            
+            std::cout << std::endl;
+        }
+    }
+    
+    PrintSeparator();
+    
+    // 显示任务详情（如果有）
+    bool hasTasks = false;
+    for (const auto& chassis : allChassis) {
+        if (!chassis) continue;
+        const auto& boards = chassis->GetAllBoards();
+        for (size_t i = 0; i < boards.size(); ++i) {
+            const auto& board = boards[i];
+            if (!board.GetTasks().empty()) {
+                if (!hasTasks) {
+                    std::cout << "\n任务详情:" << std::endl;
+                    PrintSeparator();
+                    hasTasks = true;
+                }
+                int slotNumber = static_cast<int>(i + 1);
+                for (const auto& task : board.GetTasks()) {
+                    std::cout << "机箱" << chassis->GetChassisNumber() 
+                              << " 槽位" << slotNumber 
+                              << " | 任务ID: " << task.taskID 
+                              << " | 状态: " << TaskStatusToString(task.taskStatus)
+                              << " | 服务: " << task.serviceName
+                              << " | 业务链路: " << task.stackName << std::endl;
+                }
+            }
+        }
+    }
+    
+    if (hasTasks) {
+        PrintSeparator();
     }
 }
 
 std::string CliService::BoardTypeToString(app::domain::BoardType type) const {
     switch (type) {
-        case app::domain::BoardType::Computing:
-            return "计算板卡";
-        case app::domain::BoardType::Switch:
-            return "交换板卡";
+        case app::domain::BoardType::Other:
+            return "其他";
+        case app::domain::BoardType::CPUGeneralComputingA:
+            return "CPU通用计算模块A型";
+        case app::domain::BoardType::CPUGeneralComputingB:
+            return "CPU通用计算模块B型";
+        case app::domain::BoardType::GPUIHighPerformanceComputing:
+            return "GPU I型高性能计算模块";
+        case app::domain::BoardType::GPUIIHighPerformanceComputing:
+            return "GPU II型高性能计算模块";
+        case app::domain::BoardType::IntegratedComputingA:
+            return "综合计算模块A型";
+        case app::domain::BoardType::IntegratedComputingB:
+            return "综合计算模块B型";
+        case app::domain::BoardType::SRIO:
+            return "SRIO模块";
+        case app::domain::BoardType::EthernetSwitch:
+            return "以太网交换模块";
+        case app::domain::BoardType::Cache:
+            return "缓存模块";
         case app::domain::BoardType::Power:
-            return "电源板卡";
+            return "电源模块";
         default:
             return "未知";
     }
@@ -479,12 +693,193 @@ void CliService::PrintAllStacksFullInfo() {
     }
     
     std::cout << "\n=== 所有业务链路完整信息 ===" << std::endl;
+    std::cout << "共 " << allStacks.size() << " 个业务链路" << std::endl;
+    PrintSeparator();
+    
+    // 表头
+    std::cout << std::left 
+              << std::setw(12) << "UUID"
+              << std::setw(20) << "名称"
+              << std::setw(12) << "部署状态"
+              << std::setw(12) << "运行状态"
+              << std::setw(20) << "标签"
+              << std::setw(10) << "组件数"
+              << std::setw(10) << "任务数"
+              << std::endl;
+    PrintSeparator();
+    
+    // 遍历所有业务链路
+    for (const auto& stack : allStacks) {
+        if (!stack) continue;
+        
+        // UUID（缩短显示）
+        std::string uuid_short = stack->GetStackUUID().length() > 12 
+            ? stack->GetStackUUID().substr(0, 12) + "..." 
+            : stack->GetStackUUID();
+        
+        // 部署状态
+        std::string deploy_status = (stack->GetDeployStatus() == 0 ? "未部署" : "已部署");
+        
+        // 运行状态
+        std::string running_status;
+        if (stack->GetRunningStatus() == 1) {
+            running_status = "正常运行";
+        } else if (stack->GetRunningStatus() == 2) {
+            running_status = "异常运行";
+        } else {
+            running_status = "未运行";
+        }
+        
+        // 标签（可能有多个，用逗号分隔）
+        std::string labels_str;
+        const auto& labels = stack->GetLabels();
+        if (!labels.empty()) {
+            for (size_t i = 0; i < labels.size(); ++i) {
+                if (i > 0) labels_str += ", ";
+                labels_str += labels[i].stackLabelName;
+            }
+        } else {
+            labels_str = "-";
+        }
+        // 如果标签太长，截断
+        if (labels_str.length() > 18) {
+            labels_str = labels_str.substr(0, 15) + "...";
+        }
+        
+        // 组件数和任务数
+        const auto& services = stack->GetAllServices();
+        size_t total_tasks = 0;
+        for (const auto& pair : services) {
+            total_tasks += pair.second.GetAllTasks().size();
+        }
+        
+        std::cout << std::left 
+                  << std::setw(12) << uuid_short
+                  << std::setw(20) << stack->GetStackName()
+                  << std::setw(12) << deploy_status
+                  << std::setw(12) << running_status
+                  << std::setw(20) << labels_str
+                  << std::setw(10) << services.size()
+                  << std::setw(10) << total_tasks
+                  << std::endl;
+    }
+    
+    PrintSeparator();
+    
+    // 显示组件和任务详情
+    std::cout << "\n组件和任务详情:" << std::endl;
+    PrintSeparator();
     
     for (const auto& stack : allStacks) {
         if (!stack) continue;
-        PrintStackDetail(stack->GetStackUUID());
-        std::cout << std::endl;
+        
+        std::cout << "\n业务链路: " << stack->GetStackName() 
+                  << " (UUID: " << stack->GetStackUUID().substr(0, 8) << "...)" << std::endl;
+        
+        const auto& services = stack->GetAllServices();
+        if (services.empty()) {
+            std::cout << "  组件: 无" << std::endl;
+        } else {
+            // 组件表格
+            std::cout << "  组件列表:" << std::endl;
+            std::cout << "  " << std::left 
+                      << std::setw(10) << "UUID"
+                      << std::setw(20) << "名称"
+                      << std::setw(12) << "状态"
+                      << std::setw(10) << "类型"
+                      << std::setw(10) << "任务数"
+                      << std::endl;
+            std::cout << "  " << std::string(62, '-') << std::endl;
+            
+            for (const auto& pair : services) {
+                const auto& service = pair.second;
+                const auto& tasks = service.GetAllTasks();
+                
+                std::cout << "  " << std::left 
+                          << std::setw(10) << service.GetServiceUUID().substr(0, 8)
+                          << std::setw(20) << service.GetServiceName()
+                          << std::setw(12) << ServiceStatusToString(service.GetServiceStatus())
+                          << std::setw(10) << (service.GetServiceType() == 0 ? "普通" : 
+                                               service.GetServiceType() == 1 ? "公共组件" : "公共链路")
+                          << std::setw(10) << tasks.size()
+                          << std::endl;
+                
+                // 任务详情
+                if (!tasks.empty()) {
+                    for (const auto& taskPair : tasks) {
+                        const auto& task = taskPair.second;
+                        const auto& resources = task.GetResources();
+                        
+                        std::cout << "    └─ 任务ID: " << task.GetTaskID() 
+                                  << ", 状态: " << TaskStatusToString(task.GetTaskStatus())
+                                  << ", 板卡: " << task.GetBoardAddress() << std::endl;
+                        
+                        // 资源使用情况（详细显示）
+                        bool hasResources = false;
+                        
+                        // CPU信息
+                        if (resources.cpuCores > 0 || resources.cpuUsed > 0 || resources.cpuUsage > 0) {
+                            std::cout << "       CPU: ";
+                            if (resources.cpuCores > 0 && resources.cpuUsed > 0) {
+                                std::cout << std::fixed << std::setprecision(2) 
+                                          << resources.cpuUsed << "/" << resources.cpuCores << "核";
+                                if (resources.cpuUsage > 0) {
+                                    std::cout << ", ";
+                                }
+                            }
+                            if (resources.cpuUsage > 0) {
+                                std::cout << std::setprecision(1) << resources.cpuUsage << "%";
+                            }
+                            std::cout << std::endl;
+                            hasResources = true;
+                        }
+                        
+                        // 内存信息
+                        if (resources.memorySize > 0 || resources.memoryUsed > 0 || resources.memoryUsage > 0) {
+                            std::cout << "       内存: ";
+                            if (resources.memorySize > 0 && resources.memoryUsed > 0) {
+                                std::cout << std::fixed << std::setprecision(2) 
+                                          << resources.memoryUsed << "/" << resources.memorySize << "MB";
+                                if (resources.memoryUsage > 0) {
+                                    std::cout << ", ";
+                                }
+                            }
+                            if (resources.memoryUsage > 0) {
+                                std::cout << std::setprecision(1) << resources.memoryUsage << "%";
+                            }
+                            std::cout << std::endl;
+                            hasResources = true;
+                        }
+                        
+                        // 网络信息
+                        if (resources.netReceive > 0 || resources.netSent > 0) {
+                            std::cout << "       网络: ";
+                            if (resources.netReceive > 0) {
+                                std::cout << "接收 " << std::fixed << std::setprecision(2) 
+                                          << resources.netReceive << "MB/s";
+                            }
+                            if (resources.netSent > 0) {
+                                if (resources.netReceive > 0) std::cout << ", ";
+                                std::cout << "发送 " << std::setprecision(2) 
+                                          << resources.netSent << "MB/s";
+                            }
+                            std::cout << std::endl;
+                            hasResources = true;
+                        }
+                        
+                        // GPU信息
+                        if (resources.gpuMemUsed > 0) {
+                            std::cout << "       GPU显存: " << std::fixed << std::setprecision(2) 
+                                      << resources.gpuMemUsed << "GB" << std::endl;
+                            hasResources = true;
+                        }
+                    }
+                }
+            }
+        }
     }
+    
+    PrintSeparator();
 }
 
 std::string CliService::ServiceStatusToString(int status) const {
