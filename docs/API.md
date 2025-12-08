@@ -141,9 +141,9 @@
 | Root | message | String | 响应信息 |
 | data[] | stackName | String | [cite_start]业务链路名称 [cite: 13] |
 | data[] | stackUUID | String | [cite_start]业务链路UUID [cite: 13] |
-| data[].stackLabelInfos[] | satckLabelName | String | [cite_start]业务链路标签名称 [cite: 13] |
-| data[].stackLabelInfos[] | satckLabelUUID | String | [cite_start]业务链路标签UUID [cite: 13] |
-| data[] | stackDelpoyStatus | Integer | [cite_start]部署状态：0-未部署；1-已部署 [cite: 14] |
+| data[].stackLabelInfos[] | stackLabelName | String | [cite_start]业务链路标签名称 [cite: 13] |
+| data[].stackLabelInfos[] | stackLabelUUID | String | [cite_start]业务链路标签UUID [cite: 13] |
+| data[] | stackDeployStatus | Integer | [cite_start]部署状态：0-未部署；1-已部署 [cite: 14] |
 | data[] | stackRunningStatus | Integer | [cite_start]运行状态：1-正常运行；2-异常运行 [cite: 14] |
 | data[].serviceInfos[] | serviceName | String | [cite_start]算法组件名称 [cite: 14] |
 | data[].serviceInfos[] | serviceUUID | String | [cite_start]算法组件UUID [cite: 15] |

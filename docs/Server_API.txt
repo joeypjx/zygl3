@@ -165,11 +165,11 @@ Content-Type	是	Application/json	声明请求体为json
             "stackUUID": "string",               业务链路UUID
   "stackLabelInfos": [
        {
-          "satckLabelName":"string",  业务链路标签名称
-          "satckLabelUUID":"string"   业务链路标签UUID
+          "stackLabelName":"string",  业务链路标签名称
+          "stackLabelUUID":"string"   业务链路标签UUID
        }
 ],               业务链路标签信息
-            "stackDelpoyStatus": 0,             业务链路部署状态，0-未部署；1-已部署
+            "stackDeployStatus": 0,             业务链路部署状态，0-未部署；1-已部署
             "stackRunningStatus": 0,        业务链路运行状态，1-正常运行；2-异常运行
             "serviceInfos":[
                {

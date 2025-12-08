@@ -103,11 +103,11 @@ curl -X POST http://localhost:8080/api/v1/external/qyw/stackinfo \
       "stackUUID": "stack-uuid-1",
       "stackLabelInfos": [
         {
-          "satckLabelName": "Label_1_1",
-          "satckLabelUUID": "label-uuid-1-1"
+          "stackLabelName": "Label_1_1",
+          "stackLabelUUID": "label-uuid-1-1"
         }
       ],
-      "stackDelpoyStatus": 1,
+      "stackDeployStatus": 1,
       "stackRunningStatus": 1,
       "serviceInfos": [
         {
@@ -190,7 +190,7 @@ curl -X POST http://localhost:8080/api/v1/stacks/labels/deploy \
 
 **说明：**
 - 首次调用 deploy API 时，会创建业务链路数据
-- 部署成功后，`stackDelpoyStatus` 会被设置为 `1`
+- 部署成功后，`stackDeployStatus` 会被设置为 `1`
 - 部署后，`/api/v1/external/qyw/stackinfo` 和 `/api/v1/external/qyw/boardinfo` 会返回相应的数据
 
 ---

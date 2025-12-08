@@ -51,26 +51,51 @@ _shared_data = {
 }
 
 
-def generate_mock_stack_data():
-    """生成模拟业务链路数据"""
+def generate_mock_stack_data(stack_labels=None):
+    """
+    生成模拟业务链路数据
+    :param stack_labels: 可选的标签名称列表，如果提供则根据这些标签名称生成对应的stacks
+    """
     stacks = []
     
-    # 生成多个业务链路
-    for stack_idx in range(1, 6):  # 5个业务链路
-        stack = {
-            "stackName": f"Stack_{stack_idx}",
-            "stackUUID": f"stack-uuid-{stack_idx}",
-            "stackLabelInfos": [
-                {
-                    "satckLabelName": f"Label_{stack_idx}_{label_idx}",
-                    "satckLabelUUID": f"label-uuid-{stack_idx}-{label_idx}"
-                }
-                for label_idx in range(1, random.randint(2, 4))  # 1-3个标签
-            ],
-            "stackDelpoyStatus": random.choice([0, 1]),  # 0-未部署；1-已部署
-            "stackRunningStatus": random.choice([1, 2]),  # 1-正常运行；2-异常运行
-            "serviceInfos": []
-        }
+    if stack_labels and len(stack_labels) > 0:
+        # 根据传入的标签名称生成对应的stacks
+        for stack_idx, label_name in enumerate(stack_labels, 1):
+            stack = {
+                "stackName": f"Stack_{stack_idx}",
+                "stackUUID": f"stack-uuid-{stack_idx}",
+                "stackLabelInfos": [
+                    {
+                        "stackLabelName": label_name,  # 使用传入的标签名称
+                        "stackLabelUUID": f"label-uuid-{stack_idx}"  # 生成对应的UUID
+                    }
+                ],
+                "stackDeployStatus": 0,  # 初始状态为未部署
+                "stackRunningStatus": random.choice([1, 2]),  # 1-正常运行；2-异常运行
+                "serviceInfos": []
+            }
+            stacks.append(stack)
+    else:
+        # 如果没有传入标签，生成多个随机的业务链路（向后兼容）
+        for stack_idx in range(1, 6):  # 5个业务链路
+            stack = {
+                "stackName": f"Stack_{stack_idx}",
+                "stackUUID": f"stack-uuid-{stack_idx}",
+                "stackLabelInfos": [
+                    {
+                        "stackLabelName": f"Label_{stack_idx}_{label_idx}",
+                        "stackLabelUUID": f"label-uuid-{stack_idx}-{label_idx}"
+                    }
+                    for label_idx in range(1, random.randint(2, 4))  # 1-3个标签
+                ],
+                "stackDeployStatus": random.choice([0, 1]),  # 0-未部署；1-已部署
+                "stackRunningStatus": random.choice([1, 2]),  # 1-正常运行；2-异常运行
+                "serviceInfos": []
+            }
+            stacks.append(stack)
+    
+    # 为每个stack生成组件和任务
+    for stack_idx, stack in enumerate(stacks, 1):
         
         # 每个业务链路有多个组件
         for service_idx in range(1, random.randint(2, 5)):  # 1-4个组件
@@ -120,8 +145,6 @@ def generate_mock_stack_data():
                     service["taskInfos"].append(task)
             
             stack["serviceInfos"].append(service)
-        
-        stacks.append(stack)
     
     return stacks
 
@@ -355,28 +378,28 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
                 return
             
-            # 如果 stacks 为空，创建新的 stackinfo 数据
+            # 如果 stacks 为空，根据传入的标签名称创建新的 stackinfo 数据
             if not _shared_data["stacks"]:
-                _shared_data["stacks"] = generate_mock_stack_data()
+                _shared_data["stacks"] = generate_mock_stack_data(stack_labels)
                 _shared_data["boards"] = generate_mock_board_data_from_stacks(_shared_data["stacks"])
             
             stacks = _shared_data["stacks"]
             
-            # 根据标签查找业务链路
+            # 根据标签名称查找业务链路
             success_stacks = []
             failure_stacks = []
             
-            for label_uuid in stack_labels:
+            for label_name in stack_labels:
                 found = False
                 for stack in stacks:
-                    # 检查业务链路是否包含该标签
+                    # 检查业务链路是否包含该标签名称
                     for label_info in stack.get("stackLabelInfos", []):
-                        if label_info.get("satckLabelUUID") == label_uuid:
+                        if label_info.get("stackLabelName") == label_name:
                             found = True
                             # 模拟部署：80%成功率
                             if random.random() < 0.8:
                                 # 部署成功：更新部署状态
-                                stack["stackDelpoyStatus"] = 1
+                                stack["stackDeployStatus"] = 1
                                 success_stacks.append({
                                     "stackName": stack["stackName"],
                                     "stackUUID": stack["stackUUID"],
@@ -398,7 +421,7 @@ class APIHandler(BaseHTTPRequestHandler):
                     failure_stacks.append({
                         "stackName": "",
                         "stackUUID": "",
-                        "message": f"未找到标签UUID为 {label_uuid} 的业务链路"
+                        "message": f"未找到标签名称为 {label_name} 的业务链路"
                     })
             
             # 更新 boardinfo 数据（因为部署状态改变了）
@@ -482,17 +505,17 @@ class APIHandler(BaseHTTPRequestHandler):
             # 获取当前的 stacks 数据
             stacks = _shared_data["stacks"] if _shared_data["stacks"] else []
             
-            # 根据标签查找并移除业务链路
+            # 根据标签名称查找并移除业务链路
             success_stacks = []
             failure_stacks = []
             stacks_to_remove = []  # 记录要移除的 stack UUID
             
-            for label_uuid in stack_labels:
+            for label_name in stack_labels:
                 found = False
                 for stack in stacks:
-                    # 检查业务链路是否包含该标签
+                    # 检查业务链路是否包含该标签名称
                     for label_info in stack.get("stackLabelInfos", []):
-                        if label_info.get("satckLabelUUID") == label_uuid:
+                        if label_info.get("stackLabelName") == label_name:
                             found = True
                             # 模拟停用：80%成功率
                             if random.random() < 0.8:
@@ -520,7 +543,7 @@ class APIHandler(BaseHTTPRequestHandler):
                     failure_stacks.append({
                         "stackName": "",
                         "stackUUID": "",
-                        "message": f"未找到标签UUID为 {label_uuid} 的业务链路"
+                        "message": f"未找到标签名称为 {label_name} 的业务链路"
                     })
             
             # 移除停用成功的业务链路
