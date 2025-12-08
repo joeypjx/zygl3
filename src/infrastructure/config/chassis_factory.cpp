@@ -194,7 +194,9 @@ std::vector<ChassisConfig> ChassisFactory::CreateHardcodedConfigs() {
             //   - 槽位1-5: 第三段 = chassisNumber * 2, 第四段 = (slotNumber - 1) * 32 + 5
             //   - 槽位6: 第三段 = chassisNumber * 2, 第四段 = 170 (固定值)
             //   - 槽位7: 第三段 = chassisNumber * 2, 第四段 = 180 (固定值)
-            //   - 槽位8-14: 第三段 = chassisNumber * 2 + 1, 第四段 = (slotNumber - 8) * 32 + 5
+            //   - 槽位8-12: 第三段 = chassisNumber * 2 + 1, 第四段 = (slotNumber - 8) * 32 + 5
+            //   - 槽位13: 第三段 = chassisNumber * 2, 第四段 = 182 (固定值)
+            //   - 槽位14: 第三段 = chassisNumber * 2, 第四段 = 183 (固定值)
             int thirdOctet;
             int fourthOctet;
             
@@ -211,8 +213,16 @@ std::vector<ChassisConfig> ChassisFactory::CreateHardcodedConfigs() {
                     // 槽位1-5: 使用公式计算
                     fourthOctet = (slotNum - 1) * 32 + 5;
                 }
+            } else if (slotNum == 13) {
+                // 槽位13: 第三段 = chassisNumber * 2, 第四段 = 182
+                thirdOctet = chassisNum * 2;
+                fourthOctet = 182;
+            } else if (slotNum == 14) {
+                // 槽位14: 第三段 = chassisNumber * 2, 第四段 = 183
+                thirdOctet = chassisNum * 2;
+                fourthOctet = 183;
             } else {
-                // 槽位8-14: 使用 chassisNumber * 2 + 1 作为第三段
+                // 槽位8-12: 使用 chassisNumber * 2 + 1 作为第三段
                 thirdOctet = chassisNum * 2 + 1;
                 fourthOctet = (slotNum - 8) * 32 + 5;
             }

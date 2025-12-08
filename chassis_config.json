@@ -18,8 +18,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.3.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.3.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.3.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.3.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.3.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.2.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.2.183", "boardType": 2 }
         ]
       },
       {
@@ -38,8 +38,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.5.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.5.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.5.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.5.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.5.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.4.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.4.183", "boardType": 2 }
         ]
       },
       {
@@ -58,8 +58,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.7.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.7.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.7.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.7.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.7.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.6.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.6.183", "boardType": 2 }
         ]
       },
       {
@@ -78,8 +78,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.9.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.9.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.9.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.9.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.9.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.8.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.8.183", "boardType": 2 }
         ]
       },
       {
@@ -98,8 +98,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.11.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.11.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.11.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.11.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.11.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.10.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.10.183", "boardType": 2 }
         ]
       },
       {
@@ -118,8 +118,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.13.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.13.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.13.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.13.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.13.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.12.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.12.183", "boardType": 2 }
         ]
       },
       {
@@ -138,8 +138,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.15.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.15.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.15.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.15.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.15.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.14.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.14.183", "boardType": 2 }
         ]
       },
       {
@@ -158,8 +158,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.17.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.17.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.17.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.17.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.17.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.16.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.16.183", "boardType": 2 }
         ]
       },
       {
@@ -178,8 +178,8 @@
           { "boardNumber": 10, "boardAddress": "192.168.19.69", "boardType": 0 },
           { "boardNumber": 11, "boardAddress": "192.168.19.101", "boardType": 0 },
           { "boardNumber": 12, "boardAddress": "192.168.19.133", "boardType": 0 },
-          { "boardNumber": 13, "boardAddress": "192.168.19.165", "boardType": 2 },
-          { "boardNumber": 14, "boardAddress": "192.168.19.197", "boardType": 2 }
+          { "boardNumber": 13, "boardAddress": "192.168.18.182", "boardType": 2 },
+          { "boardNumber": 14, "boardAddress": "192.168.18.183", "boardType": 2 }
         ]
       }
     ]
