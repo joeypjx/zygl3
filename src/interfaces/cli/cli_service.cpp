@@ -7,11 +7,13 @@
 #include "src/domain/stack.h"
 #include "src/infrastructure/api_client/qyw_api_client.h"
 #include "src/infrastructure/config/config_manager.h"
+#include "src/infrastructure/controller/resource_controller.h"
 #include <spdlog/spdlog.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <chrono>
 
 namespace app::interfaces {
 
@@ -21,6 +23,7 @@ CliService::CliService(std::shared_ptr<app::domain::IChassisRepository> chassisR
     : m_chassisRepo(chassisRepo),
       m_stackRepo(stackRepo),
       m_apiClient(apiClient),
+      m_chassisController(std::make_unique<ResourceController>()),
       m_running(false) {
 }
 
@@ -132,6 +135,12 @@ void CliService::ProcessCommand(const std::string& command) {
         } else {
             UndeployStacks(labels);
         }
+    } else if (cmd == "reset" || cmd == "resetall" || cmd == "r") {
+        // 复位所有机箱的所有板卡
+        ResetAllChassisBoards();
+    } else if (cmd == "selfcheck" || cmd == "check" || cmd == "sc") {
+        // 自检所有机箱的所有板卡
+        SelfcheckAllChassisBoards();
     } else {
         spdlog::warn("未知命令: {}", command);
         spdlog::info("输入 'help' 或 'h' 查看可用命令");
@@ -145,6 +154,8 @@ void CliService::PrintHelp() {
     std::cout << "  task, t <机箱> <槽位> <序号>  - 显示指定任务的详细信息" << std::endl;
     std::cout << "  deploy, d <标签...>   - 启动指定标签的业务链路" << std::endl;
     std::cout << "  undeploy, u <标签...> - 停止指定标签的业务链路" << std::endl;
+    std::cout << "  reset, resetall, r    - 复位所有机箱的所有板卡" << std::endl;
+    std::cout << "  selfcheck, check, sc  - 自检所有机箱的所有板卡" << std::endl;
     std::cout << "  help, h, ?            - 显示此帮助信息" << std::endl;
     std::cout << "  quit, exit, q         - 退出CLI服务" << std::endl;
     std::cout << "\n示例:" << std::endl;
@@ -153,6 +164,8 @@ void CliService::PrintHelp() {
     std::cout << "  t 1 3 1               - 显示机箱1槽位3的第1个任务" << std::endl;
     std::cout << "  d label1 label2       - 启动标签为label1和label2的业务链路" << std::endl;
     std::cout << "  u label1              - 停止标签为label1的业务链路" << std::endl;
+    std::cout << "  reset                 - 复位所有机箱的所有板卡" << std::endl;
+    std::cout << "  selfcheck             - 自检所有机箱的所有板卡（ping检查）" << std::endl;
 }
 
 void CliService::PrintAllChassisOverview() {
@@ -1004,6 +1017,189 @@ void CliService::UndeployStacks(const std::vector<std::string>& labels) {
     }
     
     PrintSeparator();
+}
+
+void CliService::ResetAllChassisBoards() {
+    if (!m_chassisController) {
+        spdlog::error("错误: 机箱控制器未初始化");
+        return;
+    }
+
+    spdlog::info("开始复位所有机箱的所有板卡...");
+    
+    // 获取所有机箱
+    auto allChassis = m_chassisRepo->GetAll();
+    
+    if (allChassis.empty()) {
+        spdlog::warn("未找到任何机箱");
+        return;
+    }
+    
+    std::cout << "\n复位结果:" << std::endl;
+    PrintSeparator();
+    
+    int totalSuccess = 0;
+    int totalFailed = 0;
+    
+    // 遍历所有机箱（最多9个）
+    for (size_t chassisIdx = 0; chassisIdx < allChassis.size() && chassisIdx < 9; ++chassisIdx) {
+        const auto& chassis = allChassis[chassisIdx];
+        int chassisNumber = chassis->GetChassisNumber();
+        
+        // 获取机箱IP地址（使用该机箱中boardType是EthernetSwitch（即10）的第一个板卡作为机箱IP）
+        std::string chassisIp;
+        const auto& boards = chassis->GetAllBoards();
+        
+        // 查找第一个EthernetSwitch类型的板卡
+        bool foundEthernetSwitch = false;
+        for (const auto& board : boards) {
+            if (board.GetBoardType() == app::domain::BoardType::EthernetSwitch && 
+                !board.GetAddress().empty()) {
+                chassisIp = board.GetAddress();
+                foundEthernetSwitch = true;
+                break;
+            }
+        }
+        
+        // 如果没有找到EthernetSwitch板卡，使用默认格式
+        if (!foundEthernetSwitch) {
+            chassisIp = "192.168." + std::to_string(chassisNumber * 2) + ".180";
+        }
+        
+        // 收集该机箱所有板卡的槽位号（1-12）
+        std::vector<int> slotNumbers;
+        for (int boardIdx = 0; boardIdx < 12 && boardIdx < static_cast<int>(boards.size()); ++boardIdx) {
+            slotNumbers.push_back(boardIdx + 1);  // 槽位号从1开始
+        }
+        
+        if (slotNumbers.empty()) {
+            spdlog::warn("机箱{} 没有板卡需要复位", chassisNumber);
+            continue;
+        }
+        
+        // 构建槽位字符串用于显示
+        std::string slotStr;
+        for (size_t i = 0; i < slotNumbers.size(); ++i) {
+            slotStr += std::to_string(slotNumbers[i]);
+            if (i < slotNumbers.size() - 1) {
+                slotStr += ",";
+            }
+        }
+        
+        std::cout << "机箱" << chassisNumber << " (IP: " << chassisIp << ", 板卡: " << slotStr << "): ";
+        std::cout.flush();
+        
+        // 调用复位接口
+        uint32_t requestId = static_cast<uint32_t>(std::chrono::system_clock::now().time_since_epoch().count());
+        auto resetResult = m_chassisController->resetBoard(chassisIp, slotNumbers, requestId);
+        
+        // 统计结果
+        int successCount = 0;
+        int failedCount = 0;
+        
+        if (resetResult.result == ResourceController::OperationResult::SUCCESS ||
+            resetResult.result == ResourceController::OperationResult::PARTIAL_SUCCESS) {
+            // 统计成功和失败的板卡数
+            for (const auto& slotResult : resetResult.slot_results) {
+                if (slotResult.status == ResourceController::SlotStatus::NO_OPERATION_OR_SUCCESS) {
+                    successCount++;
+                } else {
+                    failedCount++;
+                }
+            }
+            
+            if (failedCount == 0) {
+                std::cout << "✓ 全部成功 (" << successCount << "个板卡)" << std::endl;
+                totalSuccess += successCount;
+            } else {
+                std::cout << "⚠ 部分成功 (成功: " << successCount << ", 失败: " << failedCount << ")" << std::endl;
+                totalSuccess += successCount;
+                totalFailed += failedCount;
+            }
+        } else {
+            std::cout << "✗ 全部失败 (" << slotNumbers.size() << "个板卡)" << std::endl;
+            std::cout << "  错误: " << resetResult.message << std::endl;
+            totalFailed += slotNumbers.size();
+        }
+    }
+    
+    PrintSeparator();
+    std::cout << "总计: 成功 " << totalSuccess << " 个板卡, 失败 " << totalFailed << " 个板卡" << std::endl;
+    PrintSeparator();
+    
+    spdlog::info("复位操作完成: 成功 {} 个板卡, 失败 {} 个板卡", totalSuccess, totalFailed);
+}
+
+void CliService::SelfcheckAllChassisBoards() {
+    spdlog::info("开始自检所有机箱的所有板卡...");
+    
+    // 获取所有机箱
+    auto allChassis = m_chassisRepo->GetAll();
+    
+    if (allChassis.empty()) {
+        spdlog::warn("未找到任何机箱");
+        return;
+    }
+    
+    std::cout << "\n自检结果:" << std::endl;
+    PrintSeparator();
+    
+    int totalSuccess = 0;
+    int totalFailed = 0;
+    
+    // 遍历所有机箱（最多9个）
+    for (size_t chassisIdx = 0; chassisIdx < allChassis.size() && chassisIdx < 9; ++chassisIdx) {
+        const auto& chassis = allChassis[chassisIdx];
+        int chassisNumber = chassis->GetChassisNumber();
+        
+        const auto& boards = chassis->GetAllBoards();
+        
+        std::cout << "机箱" << chassisNumber << ":" << std::endl;
+        
+        int chassisSuccess = 0;
+        int chassisFailed = 0;
+        
+        // 遍历12块板卡（或实际板卡数量）
+        for (int boardIdx = 0; boardIdx < 12 && boardIdx < static_cast<int>(boards.size()); ++boardIdx) {
+            const auto& board = boards[boardIdx];
+            int slotNumber = boardIdx + 1;
+            std::string boardIp = board.GetAddress();
+            
+            std::cout << "  板卡" << slotNumber << " (IP: " << boardIp << "): ";
+            std::cout.flush();
+            
+            if (boardIp.empty()) {
+                std::cout << "✗ IP地址为空" << std::endl;
+                chassisFailed++;
+                totalFailed++;
+                continue;
+            }
+            
+            // 调用自检接口（ping检查）
+            bool checkResult = ResourceController::SelfcheckBoard(boardIp);
+            
+            if (checkResult) {
+                std::cout << "✓ 自检成功（ping通）" << std::endl;
+                chassisSuccess++;
+                totalSuccess++;
+            } else {
+                std::cout << "✗ 自检失败（ping不通）" << std::endl;
+                chassisFailed++;
+                totalFailed++;
+            }
+        }
+        
+        // 显示机箱统计
+        std::cout << "  机箱" << chassisNumber << " 总计: 成功 " << chassisSuccess 
+                  << " 个板卡, 失败 " << chassisFailed << " 个板卡" << std::endl;
+        std::cout << std::endl;
+    }
+    
+    PrintSeparator();
+    std::cout << "总计: 成功 " << totalSuccess << " 个板卡, 失败 " << totalFailed << " 个板卡" << std::endl;
+    PrintSeparator();
+    
+    spdlog::info("自检操作完成: 成功 {} 个板卡, 失败 {} 个板卡", totalSuccess, totalFailed);
 }
 
 } // namespace app::interfaces

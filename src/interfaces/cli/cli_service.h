@@ -17,6 +17,8 @@ namespace app::infrastructure {
     class QywApiClient;
 }
 
+class ResourceController;
+
 namespace app::interfaces {
 
 /**
@@ -131,6 +133,16 @@ private:
     void UndeployStacks(const std::vector<std::string>& labels);
 
     /**
+     * @brief 复位所有机箱的所有板卡
+     */
+    void ResetAllChassisBoards();
+
+    /**
+     * @brief 自检所有机箱的所有板卡
+     */
+    void SelfcheckAllChassisBoards();
+
+    /**
      * @brief 打印分割线
      */
     void PrintSeparator() const;
@@ -139,6 +151,7 @@ private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
+    std::unique_ptr<ResourceController> m_chassisController;
     
     std::thread m_thread;
     std::atomic<bool> m_running;
