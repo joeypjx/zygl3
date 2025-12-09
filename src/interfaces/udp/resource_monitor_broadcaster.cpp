@@ -141,11 +141,11 @@ void ResourceMonitorBroadcaster::MapBoardStatusToArray(uint8_t* array, int chass
     for (size_t i = 0; i < 12 && i < boards.size(); ++i) {
         auto boardStatus = boards[i].GetStatus();
         
-        // 1=板卡正常，0=板卡异常
+        // 0=板卡正常，1=板卡异常
         if (boardStatus == app::domain::BoardOperationalStatus::Normal) {
-            array[i] = 1;
-        } else {
             array[i] = 0;
+        } else {
+            array[i] = 1;
         }
     }
 }
@@ -165,16 +165,16 @@ void ResourceMonitorBroadcaster::MapTaskStatusToArray(uint8_t* array, int chassi
         
         for (size_t taskIdx = 0; taskIdx < 8; ++taskIdx) {
             if (taskIdx < tasks.size()) {
-                // 1=任务正常，2=任务异常
+                // 0=任务正常，1=任务异常
                 // taskStatus: 1-运行中，2-已完成，3-异常，0-其他
                 if (tasks[taskIdx].taskStatus == 1) {  // 运行中表示正常
-                    array[boardIdx * 8 + taskIdx] = 1;
+                    array[boardIdx * 8 + taskIdx] = 0;
                 } else {
-                    array[boardIdx * 8 + taskIdx] = 2;
+                    array[boardIdx * 8 + taskIdx] = 1;
                 }
             } else {
-                // 没有任务，设置为0
-                array[boardIdx * 8 + taskIdx] = 0;
+                // 没有任务，设置为2
+                array[boardIdx * 8 + taskIdx] = 2;
             }
         }
     }
@@ -232,14 +232,15 @@ void ResourceMonitorBroadcaster::BuildTaskQueryResponse(TaskQueryResponse& respo
     }
 
     // 2. 从板卡获取任务列表，根据任务序号获取taskID
+    // request.taskIndex 从1开始，所以需要减1
     const auto& tasks = board->GetTasks();
-    if (request.taskIndex >= tasks.size()) {
-        spdlog::error("任务序号超出范围: {}", request.taskIndex);
+    if (request.taskIndex - 1 < 0 || request.taskIndex - 1 > tasks.size()) {
+        spdlog::error("任务序号超出范围: taskIndex={}", request.taskIndex);
         response.taskStatus = 1;  // 异常
         return;
     }
 
-    const auto& taskInfo = tasks[request.taskIndex];
+    const auto& taskInfo = tasks[request.taskIndex - 1];
     std::string taskID = taskInfo.taskID;
 
     // 3. 通过stackRepo查找任务的资源使用情况
