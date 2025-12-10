@@ -3,6 +3,7 @@
 #include "src/domain/board.h"
 #include "src/domain/value_objects.h"
 #include "src/infrastructure/config/config_manager.h"
+#include "src/infrastructure/utils/udp_data_printer.h"
 #include <spdlog/spdlog.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -98,6 +99,10 @@ bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId)
     
     // 构建板卡状态和任务状态数据
     BuildResponseData(response);
+    
+    // 打印要发送的UDP数据（可选，用于调试）
+    // app::infrastructure::utils::UdpDataPrinter::PrintSentData(
+    //     &response, sizeof(response), m_multicastGroup, m_port);
     
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -928,6 +933,11 @@ void ResourceMonitorListener::ListenLoop() {
 
         // 至少需要24字节才能读取命令码（header[22] + command[2]）
         if (recvLen > 0 && recvLen >= 24) {
+            // 打印接收到的UDP数据（可选，用于调试）
+            // char senderIpStr[INET_ADDRSTRLEN];
+            // inet_ntop(AF_INET, &senderAddr.sin_addr, senderIpStr, INET_ADDRSTRLEN);
+            // app::infrastructure::utils::UdpDataPrinter::PrintReceivedData(
+            //     buffer, recvLen, senderIpStr, ntohs(senderAddr.sin_port));
             // 先解析命令码（位于22-23字节）
             uint16_t command;
             memcpy(&command, buffer + 22, 2);
