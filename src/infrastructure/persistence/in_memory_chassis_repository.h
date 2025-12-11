@@ -124,7 +124,7 @@ public:
             auto chassis = it->second;
             bool result = chassis->UpdateBoardBySlot(slotNumber, board);
             if (result) {
-                spdlog::info("InMemoryChassisRepository::UpdateBoard: 成功更新机箱 {} 槽位 {} 的板卡", 
+                spdlog::debug("InMemoryChassisRepository::UpdateBoard: 成功更新机箱 {} 槽位 {} 的板卡", 
                              chassisNumber, slotNumber);
             } else {
                 spdlog::warn("InMemoryChassisRepository::UpdateBoard: 更新机箱 {} 槽位 {} 的板卡失败", 

@@ -73,7 +73,7 @@
 
 1 0-21 22 头部
 2 22-23 2 F107H
-3 24-25 2 problem code
+3 24-25 2 problem code 0:board alert; 1:task alert
 4 26-281 256 故障描述
 
 6 BMC查询

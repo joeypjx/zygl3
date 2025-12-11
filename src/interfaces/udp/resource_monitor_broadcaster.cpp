@@ -101,8 +101,8 @@ bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId)
     BuildResponseData(response);
     
     // 打印要发送的UDP数据（可选，用于调试）
-    // app::infrastructure::utils::UdpDataPrinter::PrintSentData(
-    //     &response, sizeof(response), m_multicastGroup, m_port);
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+        &response, sizeof(response), m_multicastGroup, m_port);
     
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -205,6 +205,10 @@ bool ResourceMonitorBroadcaster::SendTaskQueryResponse(const TaskQueryRequest& r
 
     // 构建任务查询响应数据
     BuildTaskQueryResponse(response, request);
+
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+        &response, sizeof(response), m_multicastGroup, m_port);
 
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -323,6 +327,10 @@ bool ResourceMonitorBroadcaster::HandleTaskStartRequest(const TaskStartRequest& 
     // 构建启动响应数据
     BuildTaskStartResponse(response, request);
 
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+            &response, sizeof(response), m_multicastGroup, m_port);
+
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
                         (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
@@ -356,6 +364,10 @@ bool ResourceMonitorBroadcaster::HandleTaskStopRequest(const TaskStopRequest& re
 
     // 构建停止响应数据
     BuildTaskStopResponse(response, request);
+
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+        &response, sizeof(response), m_multicastGroup, m_port);
 
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -494,11 +506,12 @@ uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
         return 0;  // 没有运行任务时返回0
     }
     
-    // 检查是否以"模式"开头
-    if (label.length() > 2 && label.substr(0, 2) == "模式") {
+    // 检查是否以"模式"开头（UTF-8编码中，"模式"占6个字节）
+    const std::string prefix = "模式";
+    if (label.length() >= prefix.length() && label.substr(0, prefix.length()) == prefix) {
         try {
             // 提取"模式"后面的数字
-            std::string numStr = label.substr(2);
+            std::string numStr = label.substr(prefix.length());
             return static_cast<uint16_t>(std::stoul(numStr));
         } catch (const std::exception&) {
             // 如果转换失败，返回0
@@ -530,6 +543,10 @@ bool ResourceMonitorBroadcaster::HandleChassisResetRequest(const ChassisResetReq
 
     // 构建复位响应数据
     BuildChassisResetResponse(response, request);
+
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+            &response, sizeof(response), m_multicastGroup, m_port);
 
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -567,6 +584,10 @@ bool ResourceMonitorBroadcaster::HandleChassisSelfCheckRequest(const ChassisSelf
 
     // 构建自检响应数据
     BuildChassisSelfCheckResponse(response, request);
+
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+            &response, sizeof(response), m_multicastGroup, m_port);
 
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &response, sizeof(response), 0,
@@ -723,7 +744,7 @@ void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse&
     }
 }
 
-bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescription) {
+bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescription, uint16_t problemCode) {
     if (m_socket < 0) {
         spdlog::error("发送故障上报失败: socket未初始化");
         return false;
@@ -738,6 +759,9 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     
     // 设置命令码
     packet.command = m_cmdFaultReport;
+
+    // 设置问题代码
+    packet.problemCode = problemCode;
     
     // 设置故障描述（最多256字符）
     size_t descLen = faultDescription.length();
@@ -748,6 +772,10 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     strncpy(packet.faultDescription, faultDescription.c_str(), descLen);
     packet.faultDescription[descLen] = '\0';
     
+    // 打印要发送的UDP数据（可选，用于调试）
+    app::infrastructure::utils::UdpDataPrinter::PrintSentDataSimple(
+            &packet, sizeof(packet), m_multicastGroup, m_port);
+
     // 发送组播数据包（使用构造函数中初始化的组播地址）
     int result = sendto(m_socket, &packet, sizeof(packet), 0,
                         (struct sockaddr*)&m_multicastAddr, sizeof(m_multicastAddr));
@@ -934,10 +962,10 @@ void ResourceMonitorListener::ListenLoop() {
         // 至少需要24字节才能读取命令码（header[22] + command[2]）
         if (recvLen > 0 && recvLen >= 24) {
             // 打印接收到的UDP数据（可选，用于调试）
-            // char senderIpStr[INET_ADDRSTRLEN];
-            // inet_ntop(AF_INET, &senderAddr.sin_addr, senderIpStr, INET_ADDRSTRLEN);
-            // app::infrastructure::utils::UdpDataPrinter::PrintReceivedData(
-            //     buffer, recvLen, senderIpStr, ntohs(senderAddr.sin_port));
+            char senderIpStr[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &senderAddr.sin_addr, senderIpStr, INET_ADDRSTRLEN);
+            app::infrastructure::utils::UdpDataPrinter::PrintReceivedDataSimple(
+                buffer, recvLen, senderIpStr, ntohs(senderAddr.sin_port));
             // 先解析命令码（位于22-23字节）
             uint16_t command;
             memcpy(&command, buffer + 22, 2);

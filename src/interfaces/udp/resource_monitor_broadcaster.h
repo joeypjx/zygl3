@@ -107,7 +107,8 @@ struct TaskStopResponse {
 struct FaultReportPacket {
     char header[22];           // 报文头部 (0-21)
     uint16_t command;         // 命令码 F107H (22-23)
-    char faultDescription[256]; // 故障描述 (24-279)
+    uint16_t problemCode;     // 问题代码 0:board alert; 1:task alert (24-25)
+    char faultDescription[256]; // 故障描述 (26-281)
 };
 
 /**
@@ -245,9 +246,10 @@ public:
     /**
      * @brief 发送故障上报组播数据包
      * @param faultDescription 故障描述（最多256字符）
+     * @param problemCode 问题代码 0:hoard alert; 1:task alert
      * @return 是否发送成功
      */
-    bool SendFaultReport(const std::string& faultDescription);
+    bool SendFaultReport(const std::string& faultDescription, uint16_t problemCode);
 
     /**
      * @brief 处理BMC查询请求并发送响应

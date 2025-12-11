@@ -40,7 +40,7 @@ public:
         m_stackMap[stackUUID] = stack;
         
         if (isUpdate) {
-            spdlog::info("InMemoryStackRepository::Save: 更新业务链路 {} ({})", 
+            spdlog::debug("InMemoryStackRepository::Save: 更新业务链路 {} ({})", 
                          stackUUID, stack->GetStackName());
         } else {
             spdlog::info("InMemoryStackRepository::Save: 保存新业务链路 {} ({})", 

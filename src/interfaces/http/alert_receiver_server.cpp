@@ -107,7 +107,7 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
         }
         
         if (m_broadcaster) {
-            m_broadcaster->SendFaultReport(faultDesc.str());
+            m_broadcaster->SendFaultReport(faultDesc.str(), 0);
         }
         
         // 更新仓储中的板卡状态为异常
@@ -220,7 +220,7 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
         }
         
         if (m_broadcaster) {
-            m_broadcaster->SendFaultReport(faultDesc.str());
+            m_broadcaster->SendFaultReport(faultDesc.str(), 1);
         }
         
         // TODO: 这里可以根据需要更新仓储中的数据或做其他处理

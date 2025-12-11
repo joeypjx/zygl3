@@ -60,3 +60,20 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# Debug 配置（用于 gdb 调试）
+# 设置默认构建类型为 Debug（如果未指定）
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+
+# Debug 模式下的编译选项
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        # MSVC: /Zi 生成调试信息，/Od 禁用优化
+        target_compile_options(zygl PRIVATE /Zi /Od)
+    else()
+        # GCC/Clang: -g 生成调试信息，-O0 禁用优化
+        target_compile_options(zygl PRIVATE -g -O0)
+    endif()
+endif()
+
