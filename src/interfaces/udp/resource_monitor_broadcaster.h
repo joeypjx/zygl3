@@ -327,6 +327,13 @@ private:
      */
     uint16_t LabelToWorkMode(const std::string& label);
 
+    /**
+     * @brief 设置响应头部（22字节）
+     * @param header 响应头部缓冲区（22字节）
+     * @param totalLength 响应包总长度
+     */
+    void SetResponseHeader(char* header, uint16_t totalLength);
+
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;

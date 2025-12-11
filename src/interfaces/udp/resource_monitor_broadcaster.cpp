@@ -12,6 +12,9 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstdlib>
+#include <ctime>
+#include <ifaddrs.h>
+#include <chrono>
 
 namespace app::interfaces {
 
@@ -79,6 +82,96 @@ void ResourceMonitorBroadcaster::Stop() {
     spdlog::info("资源监控广播器已停止");
 }
 
+void ResourceMonitorBroadcaster::SetResponseHeader(char* header, uint16_t totalLength) {
+    // 清空头部
+    memset(header, 0, 22);
+    
+    // 0-1: total length (2字节，主机字节序)
+    memcpy(header + 0, &totalLength, 2);
+    
+    // 2-3: 0000H (2字节)
+    uint16_t zero = 0;
+    memcpy(header + 2, &zero, 2);
+    
+    // 4-7: local IP (4字节，主机字节序)
+    // 从配置文件获取 alert_server host
+    std::string localIpStr = app::infrastructure::ConfigManager::GetString("/alert_server/host", "0.0.0.0");
+    uint32_t localIp = 0;
+    
+    // 如果配置的是 "0.0.0.0"，尝试从 socket 或网络接口获取实际 IP
+    if (localIpStr == "0.0.0.0" || localIpStr.empty()) {
+        struct sockaddr_in localAddr;
+        socklen_t addrLen = sizeof(localAddr);
+        if (getsockname(m_socket, (struct sockaddr*)&localAddr, &addrLen) == 0) {
+            localIp = ntohl(localAddr.sin_addr.s_addr);  // 转换为主机字节序
+        } else {
+            // 如果获取失败，尝试从网络接口获取
+            struct ifaddrs* ifaddr;
+            if (getifaddrs(&ifaddr) == 0) {
+                for (struct ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+                    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                        struct sockaddr_in* sin = (struct sockaddr_in*)ifa->ifa_addr;
+                        // 跳过回环地址
+                        if (sin->sin_addr.s_addr != htonl(INADDR_LOOPBACK)) {
+                            localIp = ntohl(sin->sin_addr.s_addr);  // 转换为主机字节序
+                            break;
+                        }
+                    }
+                }
+                freeifaddrs(ifaddr);
+            }
+        }
+    } else {
+        // 将 IP 字符串转换为 uint32_t（主机字节序）
+        struct in_addr addr;
+        if (inet_pton(AF_INET, localIpStr.c_str(), &addr) == 1) {
+            localIp = ntohl(addr.s_addr);  // 转换为主机字节序
+        } else {
+            spdlog::warn("无法解析 alert_server host IP: {}, 使用默认值 0", localIpStr);
+            localIp = 0;
+        }
+    }
+    memcpy(header + 4, &localIp, 4);
+    
+    // 8-11: target IP (4字节，组播地址，主机字节序)
+    uint32_t targetIp = ntohl(m_multicastAddr.sin_addr.s_addr);  // 转换为主机字节序
+    memcpy(header + 8, &targetIp, 4);
+    
+    // 12-15: timestamp from today 00:00:00 (4字节，主机字节序，毫秒)
+    // 获取当前时间（毫秒精度）
+    auto now = std::chrono::system_clock::now();
+    auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    
+    // 计算今天 00:00:00 的时间戳（毫秒）
+    time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    struct tm today;
+    localtime_r(&nowTime, &today);  // 使用线程安全的 localtime_r
+    today.tm_hour = 0;
+    today.tm_min = 0;
+    today.tm_sec = 0;
+    time_t todayStart = mktime(&today);
+    auto todayStartMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::from_time_t(todayStart).time_since_epoch()).count();
+    
+    // 计算从今天 00:00:00 开始的毫秒数
+    uint32_t timestamp = static_cast<uint32_t>(nowMs - todayStartMs);
+    memcpy(header + 12, &timestamp, 4);
+    
+    // 16: 01H (1字节)
+    header[16] = 0x01;
+    
+    // 17: Flag B2H (1字节)
+    header[17] = 0xB2;
+    
+    // 18-19: total length - 16 (2字节，主机字节序)
+    uint16_t lengthMinus16 = totalLength - 16;
+    memcpy(header + 18, &lengthMinus16, 2);
+    
+    // 20-21: FFFFH (2字节)
+    uint16_t ffff = 0xFFFF;
+    memcpy(header + 20, &ffff, 2);
+}
+
 bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId) {
     if (m_socket < 0) {
         return false;
@@ -88,11 +181,11 @@ bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId)
     ResourceMonitorResponse response;
     memset(&response, 0, sizeof(response));
     
-    // 设置头部（22字节）
-    memset(response.header, 0, 22);
-    
     // 设置命令码
     response.command = m_cmdResourceMonitorResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
     
     // 设置响应ID（与请求ID一致）
     response.responseId = requestId;
@@ -194,11 +287,11 @@ bool ResourceMonitorBroadcaster::SendTaskQueryResponse(const TaskQueryRequest& r
     TaskQueryResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部（22字节）
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdTaskQueryResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
@@ -315,11 +408,11 @@ bool ResourceMonitorBroadcaster::HandleTaskStartRequest(const TaskStartRequest& 
     TaskStartResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdTaskStartResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
@@ -353,11 +446,11 @@ bool ResourceMonitorBroadcaster::HandleTaskStopRequest(const TaskStopRequest& re
     TaskStopResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdTaskStopResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
@@ -532,11 +625,11 @@ bool ResourceMonitorBroadcaster::HandleChassisResetRequest(const ChassisResetReq
     ChassisResetResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdChassisResetResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
@@ -570,11 +663,11 @@ bool ResourceMonitorBroadcaster::HandleChassisSelfCheckRequest(const ChassisSelf
     ChassisSelfCheckResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdChassisSelfCheckResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
@@ -754,11 +847,11 @@ bool ResourceMonitorBroadcaster::SendFaultReport(const std::string& faultDescrip
     FaultReportPacket packet;
     memset(&packet, 0, sizeof(packet));
     
-    // 设置头部（22字节）
-    memset(packet.header, 0, 22);
-    
     // 设置命令码
     packet.command = m_cmdFaultReport;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(packet.header, sizeof(packet));
 
     // 设置问题代码
     packet.problemCode = problemCode;
@@ -798,11 +891,11 @@ bool ResourceMonitorBroadcaster::HandleBmcQueryRequest(const BmcQueryRequest& re
     BmcQueryResponse response;
     memset(&response, 0, sizeof(response));
 
-    // 设置头部（22字节）
-    memset(response.header, 0, 22);
-
     // 设置命令码
     response.command = m_cmdBmcQueryResp;
+    
+    // 设置头部（22字节）
+    SetResponseHeader(response.header, sizeof(response));
 
     // 设置响应ID（与请求ID一致）
     response.responseId = request.requestId;
