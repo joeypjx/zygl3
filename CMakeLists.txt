@@ -14,6 +14,7 @@ set(SOURCES
     src/infrastructure/collectors/data_collector_service.cpp
     src/infrastructure/controller/resource_controller.cpp
     src/infrastructure/utils/udp_data_printer.cpp
+    src/infrastructure/ha/heartbeat_service.cpp
     src/interfaces/udp/resource_monitor_broadcaster.cpp
     src/interfaces/http/alert_receiver_server.cpp
     src/interfaces/cli/cli_service.cpp

@@ -3,6 +3,7 @@
 #include "src/infrastructure/persistence/in_memory_stack_repository.h"
 #include "src/infrastructure/api_client/qyw_api_client.h"
 #include "src/infrastructure/collectors/data_collector_service.h"
+#include "src/infrastructure/ha/heartbeat_service.h"
 #include "src/interfaces/udp/resource_monitor_broadcaster.h"
 #include "src/interfaces/http/alert_receiver_server.h"
 #include "src/interfaces/cli/cli_service.h"
@@ -80,8 +81,19 @@ int main() {
     );
     broadcaster->Start();
 
+    // 创建心跳服务（读取配置）
+    spdlog::info("创建心跳服务...");
+    std::string haMulticastGroup = ConfigManager::GetString("/ha/multicast_group", "224.100.200.16");
+    uint16_t haHeartbeatPort = static_cast<uint16_t>(ConfigManager::GetInt("/ha/heartbeat/port", 9999));
+    int haPriority = ConfigManager::GetInt("/ha/priority", 0);
+    int haHeartbeatInterval = ConfigManager::GetInt("/ha/heartbeat/interval_seconds", 3);
+    int haTimeoutThreshold = ConfigManager::GetInt("/ha/heartbeat/timeout_seconds", 9);
+    auto heartbeatService = std::make_shared<HeartbeatService>(
+        haMulticastGroup, haHeartbeatPort, haPriority, haHeartbeatInterval, haTimeoutThreshold);
+    heartbeatService->Start(HeartbeatService::Role::Unknown);  // 从Unknown开始，自动协商
+    
     auto listener = std::make_shared<ResourceMonitorListener>(
-        broadcaster,
+        broadcaster, heartbeatService,
         ConfigManager::GetString("/udp/listener/multicast_group", "234.186.1.98"),
         udpPort);
     
@@ -111,7 +123,7 @@ int main() {
     std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
     int heartbeatInterval = ConfigManager::GetInt("/collector/interval_seconds", 10);  // 使用采集间隔作为心跳间隔
     auto alertServer = std::make_shared<AlertReceiverServer>(
-        chassisRepo, stackRepo, broadcaster, apiClient, clientIp, 
+        chassisRepo, stackRepo, broadcaster, apiClient, clientIp, heartbeatService,
         httpAlertPort, httpAlertHost, heartbeatInterval);
     alertServer->Start();
     
@@ -142,6 +154,7 @@ int main() {
     bmcReceiver->Stop();
     listener->Stop();
     broadcaster->Stop();
+    heartbeatService->Stop();
     cliService->Stop();
     
     spdlog::info("系统运行结束");

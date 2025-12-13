@@ -119,14 +119,40 @@ private:
 
 ```cpp
 class ResourceMonitorListener {
+public:
+    ResourceMonitorListener(
+        std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+        std::shared_ptr<HeartbeatService> heartbeatService,  // 注入心跳服务
+        const std::string& multicastGroup,
+        uint16_t port
+    );
+    
     void ListenLoop() {
-        // 接收请求（备节点也接收，但不处理）
-        // 处理请求时，由broadcaster检查角色
+        while (m_running) {
+            // 接收组播请求
+            ssize_t recvLen = recvfrom(...);
+            
+            // 检查角色：只有主节点才处理请求
+            if (m_heartbeatService && !m_heartbeatService->IsPrimary()) {
+                // 备节点：接收请求但不处理，继续监听
+                spdlog::debug("当前为备节点，收到组播请求但不处理");
+                continue;
+            }
+            
+            // 主节点：处理请求并转发给broadcaster
+            // ... 处理请求逻辑 ...
+        }
     }
+    
+private:
+    std::shared_ptr<HeartbeatService> m_heartbeatService;
 };
 ```
 
-**注意**：Listener 可以接收请求，但处理时由 Broadcaster 检查角色。
+**注意**：
+- Listener 接收组播请求，但只有主节点才处理
+- 备节点收到请求后直接跳过，不调用broadcaster
+- 这样可以避免备节点执行不必要的处理逻辑
 
 #### 2.2.3 AlertReceiverServer
 
@@ -137,9 +163,12 @@ public:
         std::shared_ptr<IChassisRepository> chassisRepo,
         std::shared_ptr<IStackRepository> stackRepo,
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+        std::shared_ptr<QywApiClient> apiClient,
+        const std::string& clientIp,
         std::shared_ptr<HeartbeatService> heartbeatService,  // 注入心跳服务
         int port,
-        const std::string& host
+        const std::string& host,
+        int heartbeatInterval = 10
     );
     
     void HandleBoardAlert(const BoardAlertRequest& request) {
@@ -151,10 +180,24 @@ public:
         // ... 处理告警逻辑 ...
     }
     
+    void SendHeartbeat() {
+        // 检查角色：只有主节点才发送心跳
+        if (m_heartbeatService && !m_heartbeatService->IsPrimary()) {
+            spdlog::debug("当前为备节点，不发送IP心跳检测");
+            return;
+        }
+        // ... 发送心跳逻辑 ...
+    }
+    
 private:
     std::shared_ptr<HeartbeatService> m_heartbeatService;
 };
 ```
+
+**注意**：
+- `AlertReceiverServer` 负责发送IP心跳保活（通过API）
+- 只有主节点才发送心跳，备节点不发送
+- 告警处理也只有主节点执行
 
 #### 2.2.4 BmcReceiver
 
@@ -385,7 +428,7 @@ void HeartbeatService::ReceiveLoop() {
 ```cpp
 #pragma pack(push, 1)
 struct MulticastHAMessage {
-    uint16_t magic;         // 魔数 0xBEAT
+    uint16_t magic;         // 魔数 0xBEA7 (BEAT的ASCII编码)
     uint8_t msgType;        // 消息类型：1=选举公告, 2=心跳, 3=角色声明
     uint8_t role;           // 角色：1=Primary, 2=Standby, 0=Unknown
     int32_t priority;       // 优先级（网络字节序）

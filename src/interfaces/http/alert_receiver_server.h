@@ -4,6 +4,7 @@
 #include "src/domain/i_stack_repository.h"
 #include "src/interfaces/udp/resource_monitor_broadcaster.h"
 #include "src/infrastructure/api_client/qyw_api_client.h"
+#include "src/infrastructure/ha/heartbeat_service.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -71,6 +72,7 @@ public:
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
         std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
         const std::string& clientIp,
+        std::shared_ptr<app::infrastructure::HeartbeatService> heartbeatService = nullptr,  // 可选：心跳服务（用于角色检查）
         int port = 8888,
         const std::string& host = "0.0.0.0",
         int heartbeatInterval = 10  // 心跳间隔（秒）
@@ -134,6 +136,7 @@ private:
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<ResourceMonitorBroadcaster> m_broadcaster;
     std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
+    std::shared_ptr<app::infrastructure::HeartbeatService> m_heartbeatService;  // 心跳服务（用于角色检查）
     std::string m_clientIp;
     int m_port;
     std::string m_host;

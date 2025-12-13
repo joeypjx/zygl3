@@ -950,9 +950,11 @@ void ResourceMonitorBroadcaster::BuildBmcQueryResponse(BmcQueryResponse& respons
 // ResourceMonitorListener 实现
 ResourceMonitorListener::ResourceMonitorListener(
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+    std::shared_ptr<app::infrastructure::HeartbeatService> heartbeatService,
     const std::string& multicastGroup,
     uint16_t port)
     : m_broadcaster(broadcaster)
+    , m_heartbeatService(heartbeatService)
     , m_multicastGroup(multicastGroup)
     , m_port(port)
     , m_socket(-1)
@@ -1051,6 +1053,15 @@ void ResourceMonitorListener::ListenLoop() {
 
         ssize_t recvLen = recvfrom(m_socket, buffer, sizeof(buffer), 0,
                                     (struct sockaddr*)&senderAddr, &addrLen);
+
+        // 检查角色：只有主节点才处理请求
+        if (m_heartbeatService && !m_heartbeatService->IsPrimary()) {
+            // 备节点：接收请求但不处理，继续监听
+            if (recvLen > 0) {
+                spdlog::debug("当前为备节点，收到组播请求但不处理");
+            }
+            continue;
+        }
 
         // 至少需要24字节才能读取命令码（header[22] + command[2]）
         if (recvLen > 0 && recvLen >= 24) {

@@ -50,6 +50,17 @@
     "interval_seconds": 10,
     "board_timeout_seconds": 120
   },
+  "ha": {
+    "enabled": true,
+    "multicast_group": "224.100.200.16",
+    "heartbeat": {
+      "port": 9999,
+      "interval_seconds": 3,
+      "timeout_seconds": 9
+    },
+    "priority": 0,
+    "role": "auto"
+  },
   "logging": {
     "log_dir": "./logs",
     "level": "debug",

@@ -13,6 +13,7 @@ AlertReceiverServer::AlertReceiverServer(
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
     std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
     const std::string& clientIp,
+    std::shared_ptr<app::infrastructure::HeartbeatService> heartbeatService,
     int port,
     const std::string& host,
     int heartbeatInterval)
@@ -20,6 +21,7 @@ AlertReceiverServer::AlertReceiverServer(
     , m_stackRepo(stackRepo)
     , m_broadcaster(broadcaster)
     , m_apiClient(apiClient)
+    , m_heartbeatService(heartbeatService)
     , m_clientIp(clientIp)
     , m_port(port)
     , m_host(host)
@@ -87,11 +89,19 @@ void AlertReceiverServer::HeartbeatLoop() {
 }
 
 void AlertReceiverServer::SendHeartbeat() {
+    // 检查角色：只有主节点才发送心跳
+    if (m_heartbeatService) {
+        if (!m_heartbeatService->IsPrimary()) {
+            spdlog::debug("当前为备节点，不发送IP心跳检测");
+            return;
+        }
+    }
+    
     if (!m_apiClient) {
         return;
     }
     
-    spdlog::info("发送IP心跳检测...");
+    spdlog::debug("发送IP心跳检测...");
     m_apiClient->SendHeartbeat(m_clientIp);
 }
 

@@ -4,6 +4,7 @@
 #include "src/domain/i_stack_repository.h"
 #include "src/infrastructure/api_client/qyw_api_client.h"
 #include "src/infrastructure/controller/resource_controller.h"
+#include "src/infrastructure/ha/heartbeat_service.h"
 #include <string>
 #include <memory>
 #include <thread>
@@ -372,6 +373,7 @@ class ResourceMonitorListener {
 public:
     ResourceMonitorListener(
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+        std::shared_ptr<app::infrastructure::HeartbeatService> heartbeatService = nullptr,  // 可选：心跳服务（用于角色检查）
         const std::string& multicastGroup = "234.186.1.98",
         uint16_t port = 0x100A  // 端口100AH
     );
@@ -400,6 +402,7 @@ private:
 
 private:
     std::shared_ptr<ResourceMonitorBroadcaster> m_broadcaster;
+    std::shared_ptr<app::infrastructure::HeartbeatService> m_heartbeatService;  // 心跳服务（用于角色检查）
     std::string m_multicastGroup;
     uint16_t m_port;
     int m_socket;
