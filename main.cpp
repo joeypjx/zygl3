@@ -108,15 +108,18 @@ int main() {
     spdlog::info("创建HTTP告警接收服务器...");
     int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
     std::string httpAlertHost = ConfigManager::GetString("/alert_server/host", "0.0.0.0");
-    auto alertServer = std::make_shared<AlertReceiverServer>(chassisRepo, stackRepo, broadcaster, httpAlertPort, httpAlertHost);
+    std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
+    int heartbeatInterval = ConfigManager::GetInt("/collector/interval_seconds", 10);  // 使用采集间隔作为心跳间隔
+    auto alertServer = std::make_shared<AlertReceiverServer>(
+        chassisRepo, stackRepo, broadcaster, apiClient, clientIp, 
+        httpAlertPort, httpAlertHost, heartbeatInterval);
     alertServer->Start();
     
     // 10. 创建数据采集服务（读取配置）
-    std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
     int intervalSeconds = ConfigManager::GetInt("/collector/interval_seconds", 10);
     int boardTimeoutSeconds = ConfigManager::GetInt("/collector/board_timeout_seconds", 120);
     spdlog::info("创建数据采集服务（采集间隔：{}秒）...", intervalSeconds);
-    DataCollectorService collector(chassisRepo, stackRepo, apiClient, clientIp, intervalSeconds, boardTimeoutSeconds);
+    DataCollectorService collector(chassisRepo, stackRepo, apiClient, intervalSeconds, boardTimeoutSeconds);
     
     // 11. 启动数据采集（在后台线程运行）
     spdlog::info("启动数据采集服务...");

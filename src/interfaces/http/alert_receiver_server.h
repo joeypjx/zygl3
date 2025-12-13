@@ -3,11 +3,13 @@
 #include "src/domain/i_chassis_repository.h"
 #include "src/domain/i_stack_repository.h"
 #include "src/interfaces/udp/resource_monitor_broadcaster.h"
+#include "src/infrastructure/api_client/qyw_api_client.h"
 #include <memory>
 #include <string>
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 // cpp-httplib 是单头文件库
 #include "cpp-httplib/httplib.h"
@@ -67,8 +69,11 @@ public:
         std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+        std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
+        const std::string& clientIp,
         int port = 8888,
-        const std::string& host = "0.0.0.0"
+        const std::string& host = "0.0.0.0",
+        int heartbeatInterval = 10  // 心跳间隔（秒）
     );
 
     ~AlertReceiverServer();
@@ -95,6 +100,16 @@ private:
     void ServerLoop();
 
     /**
+     * @brief 心跳发送线程
+     */
+    void HeartbeatLoop();
+
+    /**
+     * @brief 发送IP心跳检测
+     */
+    void SendHeartbeat();
+
+    /**
      * @brief 处理板卡异常上报
      */
     void HandleBoardAlert(const httplib::Request& req, httplib::Response& res);
@@ -118,12 +133,16 @@ private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;
     std::shared_ptr<app::domain::IStackRepository> m_stackRepo;
     std::shared_ptr<ResourceMonitorBroadcaster> m_broadcaster;
+    std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
+    std::string m_clientIp;
     int m_port;
     std::string m_host;
+    int m_heartbeatInterval;
     httplib::Server m_server;
     
     std::atomic<bool> m_running;
     std::thread m_serverThread;
+    std::thread m_heartbeatThread;
 };
 
 }

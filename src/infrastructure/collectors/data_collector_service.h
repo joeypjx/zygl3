@@ -21,7 +21,6 @@ public:
         std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<QywApiClient> apiClient,
-        const std::string& clientIp,
         int intervalSeconds = 10,
         int boardTimeoutSeconds = 120);
 
@@ -57,11 +56,6 @@ private:
      * @brief 采集业务链路信息并更新仓储
      */
     void CollectStackInfo();
-
-    /**
-     * @brief 发送IP心跳检测
-     */
-    void SendHeartbeat();
     
     /**
      * @brief 检查所有板卡的超时状态，将超时且状态为Normal的板卡标记为Abnormal
@@ -77,7 +71,6 @@ private:
     std::atomic<bool> m_running;
     std::thread m_collectThread;
     int m_intervalSeconds;
-    std::string m_clientIp;
     int m_boardTimeoutSeconds;  // 板卡超时秒数
 };
 

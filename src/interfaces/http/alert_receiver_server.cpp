@@ -11,13 +11,19 @@ AlertReceiverServer::AlertReceiverServer(
     std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
     std::shared_ptr<app::domain::IStackRepository> stackRepo,
     std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
+    std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
+    const std::string& clientIp,
     int port,
-    const std::string& host)
+    const std::string& host,
+    int heartbeatInterval)
     : m_chassisRepo(chassisRepo)
     , m_stackRepo(stackRepo)
     , m_broadcaster(broadcaster)
+    , m_apiClient(apiClient)
+    , m_clientIp(clientIp)
     , m_port(port)
     , m_host(host)
+    , m_heartbeatInterval(heartbeatInterval)
     , m_running(false) {
 }
 
@@ -44,6 +50,7 @@ void AlertReceiverServer::Start() {
     
     m_running = true;
     m_serverThread = std::thread(&AlertReceiverServer::ServerLoop, this);
+    m_heartbeatThread = std::thread(&AlertReceiverServer::HeartbeatLoop, this);
     spdlog::info("告警接收服务器已启动，监听端口: {}", m_port);
 }
 
@@ -57,11 +64,35 @@ void AlertReceiverServer::Stop() {
     if (m_serverThread.joinable()) {
         m_serverThread.join();
     }
+    if (m_heartbeatThread.joinable()) {
+        m_heartbeatThread.join();
+    }
     spdlog::info("告警接收服务器已停止");
 }
 
 void AlertReceiverServer::ServerLoop() {
     m_server.listen(m_host.c_str(), m_port);
+}
+
+void AlertReceiverServer::HeartbeatLoop() {
+    // 启动后立即发送一次心跳
+    SendHeartbeat();
+    
+    while (m_running) {
+        std::this_thread::sleep_for(std::chrono::seconds(m_heartbeatInterval));
+        if (m_running) {
+            SendHeartbeat();
+        }
+    }
+}
+
+void AlertReceiverServer::SendHeartbeat() {
+    if (!m_apiClient) {
+        return;
+    }
+    
+    spdlog::info("发送IP心跳检测...");
+    m_apiClient->SendHeartbeat(m_clientIp);
 }
 
 void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib::Response& res) {

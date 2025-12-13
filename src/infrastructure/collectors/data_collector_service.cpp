@@ -7,7 +7,6 @@ DataCollectorService::DataCollectorService(
     std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
     std::shared_ptr<app::domain::IStackRepository> stackRepo,
     std::shared_ptr<QywApiClient> apiClient,
-    const std::string& clientIp,
     int intervalSeconds,
     int boardTimeoutSeconds)
     : m_chassisRepo(chassisRepo)
@@ -15,7 +14,6 @@ DataCollectorService::DataCollectorService(
     , m_apiClient(apiClient)
     , m_running(false)
     , m_intervalSeconds(intervalSeconds)
-    , m_clientIp(clientIp)
     , m_boardTimeoutSeconds(boardTimeoutSeconds) {
 }
 
@@ -50,9 +48,6 @@ void DataCollectorService::CollectLoop() {
     while (m_running) {
         try {
             spdlog::info("开始采集数据...");
-            
-            // 发送心跳保活
-            SendHeartbeat();
             
             // 采集板卡信息
             CollectBoardInfo();
@@ -145,11 +140,6 @@ void DataCollectorService::CollectBoardInfo() {
     }
     
     spdlog::info("  板卡信息更新完成");
-}
-
-void DataCollectorService::SendHeartbeat() {
-    spdlog::info("  发送IP心跳检测...");
-    m_apiClient->SendHeartbeat(m_clientIp);
 }
 
 void DataCollectorService::CollectStackInfo() {
