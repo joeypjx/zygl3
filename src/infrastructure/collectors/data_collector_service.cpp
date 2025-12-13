@@ -60,8 +60,8 @@ void DataCollectorService::CollectLoop() {
             // 采集业务链路信息
             CollectStackInfo();
             
-            // 检查板卡在线状态，将超时的标记为离线
-            CheckAndMarkOfflineBoards(m_boardTimeoutSeconds);
+            // 检查板卡超时状态，将超时且状态为Normal的标记为Abnormal
+            CheckAndMarkAbnormalBoards(m_boardTimeoutSeconds);
             
             spdlog::info("数据采集完成，等待 {} 秒...", m_intervalSeconds);
             
@@ -158,10 +158,7 @@ void DataCollectorService::CollectStackInfo() {
     // 调用API获取业务链路信息
     bool apiSuccess = false;
     auto stackInfos = m_apiClient->GetStackInfo(apiSuccess);
-    
-    // 调试日志：确认 apiSuccess 的值
-    spdlog::info("  API调用结果: success={}, stackInfos.size()={}", apiSuccess, stackInfos.size());
-    
+        
     // 只有在API调用成功时才更新repository
     // 如果API调用失败，保留现有数据，避免因网络问题等临时故障导致数据丢失
     if (!apiSuccess) {
@@ -170,7 +167,7 @@ void DataCollectorService::CollectStackInfo() {
     }
     
     if (stackInfos.empty()) {
-        spdlog::info("  业务链路信息为空（API调用成功但无数据），清空repository");
+        spdlog::debug("  业务链路信息为空（API调用成功但无数据），清空repository");
         // API调用成功但返回空列表，清空现有的stacks
         m_stackRepo->Clear();
         return;
@@ -249,19 +246,19 @@ void DataCollectorService::CollectStackInfo() {
     spdlog::info("  业务链路信息更新完成");
 }
 
-void DataCollectorService::CheckAndMarkOfflineBoards(int timeoutSeconds) {
+void DataCollectorService::CheckAndMarkAbnormalBoards(int timeoutSeconds) {
     // 获取所有机箱
     auto allChassis = m_chassisRepo->GetAll();
     
-    int offlineCount = 0;
+    int abnormalCount = 0;
     for (const auto& chassis : allChassis) {
         auto& boards = chassis->GetAllBoardsMutable();
         int chassisNumber = chassis->GetChassisNumber();
         
         for (auto& board : boards) {
-            // 检查板卡是否在线，如果不在线则标记为离线
-            if (board.CheckAndMarkOfflineIfNeeded(timeoutSeconds)) {
-                offlineCount++;
+            // 检查板卡是否超时，如果超时且状态是Normal则标记为Abnormal
+            if (board.CheckAndMarkAbnormalIfNeeded(timeoutSeconds)) {
+                abnormalCount++;
                 
                 // 保存更新后的板卡到仓储
                 int slotNumber = board.GetBoardNumber();
@@ -269,13 +266,13 @@ void DataCollectorService::CheckAndMarkOfflineBoards(int timeoutSeconds) {
                     m_chassisRepo->UpdateBoard(chassisNumber, slotNumber, board);
                 }
                 
-                spdlog::info("  板卡离线: 机箱{} 槽位{}", chassisNumber, slotNumber);
+                spdlog::info("  板卡超时异常: 机箱{} 槽位{}", chassisNumber, slotNumber);
             }
         }
     }
     
-    if (offlineCount > 0) {
-        spdlog::info("  检测到 {} 个板卡离线", offlineCount);
+    if (abnormalCount > 0) {
+        spdlog::info("  检测到 {} 个板卡超时异常", abnormalCount);
     }
 }
 

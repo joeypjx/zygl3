@@ -43,7 +43,7 @@ struct BoardInfoResponse {
     int boardNumber;
     int boardType;
     std::string boardAddress;
-    int boardStatus;  // 0-正常, 1-异常
+    int boardStatus;  // 0-正常, 1-异常, 2-不在位
     float voltage;    // 电压
     float current;   // 电流
     float temperature; // 温度
@@ -51,7 +51,7 @@ struct BoardInfoResponse {
     std::vector<TaskInfo> taskInfos;  // 任务信息
     
     BoardInfoResponse() : chassisNumber(0), boardNumber(0), boardType(0), 
-                         boardStatus(0), voltage(0.0f), current(0.0f), temperature(0.0f) {}
+                         boardStatus(2), voltage(0.0f), current(0.0f), temperature(0.0f) {}
 };
 
 struct LabelInfo {

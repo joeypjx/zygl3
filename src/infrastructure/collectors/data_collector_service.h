@@ -64,10 +64,10 @@ private:
     void SendHeartbeat();
     
     /**
-     * @brief 检查所有板卡的在线状态，将超时的板卡标记为离线
+     * @brief 检查所有板卡的超时状态，将超时且状态为Normal的板卡标记为Abnormal
      * @param timeoutSeconds 超时秒数（从配置读取）
      */
-    void CheckAndMarkOfflineBoards(int timeoutSeconds);
+    void CheckAndMarkAbnormalBoards(int timeoutSeconds);
 
 private:
     std::shared_ptr<app::domain::IChassisRepository> m_chassisRepo;

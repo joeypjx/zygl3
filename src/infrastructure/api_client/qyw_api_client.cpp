@@ -71,7 +71,6 @@ std::vector<StackInfoResponse> QywApiClient::GetStackInfo(bool& success) {
         spdlog::debug("GetStackInfo: API调用失败，success保持为false");
     }
     
-    spdlog::debug("GetStackInfo: 返回前，success={}, result.size()={}", success, result.size());
     return result;
 }
 

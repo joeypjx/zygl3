@@ -6,6 +6,7 @@
 #include "src/interfaces/udp/resource_monitor_broadcaster.h"
 #include "src/interfaces/http/alert_receiver_server.h"
 #include "src/interfaces/cli/cli_service.h"
+#include "src/interfaces/bmc/bmc_receiver.h"
 #include "src/infrastructure/config/config_manager.h"
 #include "src/infrastructure/config/logger_config.h"
 #include <iostream>
@@ -96,6 +97,13 @@ int main() {
     );
     listener->Start();
     
+    // 8. 创建BMC接收器（读取配置）
+    spdlog::info("创建BMC接收器...");
+    std::string bmcMulticastGroup = ConfigManager::GetString("/bmc/multicast_group", "224.100.200.15");
+    uint16_t bmcPort = static_cast<uint16_t>(ConfigManager::GetInt("/bmc/port", 5715));
+    auto bmcReceiver = std::make_shared<BmcReceiver>(chassisRepo, bmcMulticastGroup, bmcPort);
+    bmcReceiver->Start();
+    
     // 9. 创建HTTP告警接收服务器（读取配置）
     spdlog::info("创建HTTP告警接收服务器...");
     int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
@@ -128,6 +136,7 @@ int main() {
     spdlog::info("正在停止服务...");
     collector.Stop();
     alertServer->Stop();
+    bmcReceiver->Stop();
     listener->Stop();
     broadcaster->Stop();
     cliService->Stop();

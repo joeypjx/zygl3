@@ -105,7 +105,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         size_t count = m_stackMap.size();
         m_stackMap.clear();
-        spdlog::info("InMemoryStackRepository::Clear: 清空 {} 个业务链路数据", count);
+        spdlog::debug("InMemoryStackRepository::Clear: 清空 {} 个业务链路数据", count);
     }
 
     /**

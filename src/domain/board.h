@@ -46,12 +46,19 @@ public:
 
     /**
      * @brief 更新板卡状态（从API状态值）
-     * @param statusFromApi 板卡状态 (0-正常, 1-异常)
+     * @param statusFromApi 板卡状态 (0-正常, 1-异常, 2-不在位)
      */
     void UpdateStatus(int statusFromApi) {
-        m_status = (statusFromApi == 0) 
-                   ? BoardOperationalStatus::Normal 
-                   : BoardOperationalStatus::Abnormal;
+        if (statusFromApi == 0) {
+            m_status = BoardOperationalStatus::Normal;
+        } else if (statusFromApi == 1) {
+            m_status = BoardOperationalStatus::Abnormal;
+        } else if (statusFromApi == 2) {
+            m_status = BoardOperationalStatus::Offline;
+        } else {
+            // 未知状态，默认为异常
+            m_status = BoardOperationalStatus::Abnormal;
+        }
         m_lastUpdateTime = std::chrono::system_clock::now();
     }
 
@@ -60,7 +67,7 @@ public:
      * @param boardName 板卡名称
      * @param boardAddress 板卡IP地址
      * @param boardType 板卡类型
-     * @param statusFromApi 板卡状态 (0-正常, 1-异常)
+     * @param statusFromApi 板卡状态 (0-正常, 1-异常, 2-不在位)
      * @param voltage 电压
      * @param current 电流
      * @param temperature 温度
@@ -82,10 +89,8 @@ public:
         m_boardAddress = boardAddress;
         m_boardType = boardType;
         
-        // 根据API的返回值更新状态
-        m_status = (statusFromApi == 0) 
-                   ? BoardOperationalStatus::Normal 
-                   : BoardOperationalStatus::Abnormal;
+        // 根据API的返回值更新状态（复用UpdateStatus方法）
+        UpdateStatus(statusFromApi);
 
         // 更新监控数据
         m_voltage = voltage;
@@ -93,7 +98,7 @@ public:
         m_temperature = temperature;
         m_fanSpeeds = fanSpeeds;
 
-        // 更新任务列表（不再根据板卡类型过滤）
+        // 更新任务列表
         m_tasks = tasksFromApi;
         
         // 更新时间戳
@@ -101,11 +106,11 @@ public:
     }
 
     /**
-     * @brief 检查板卡是否在线，如果不在线且当前状态不是离线，则标记为离线
+     * @brief 检查板卡是否超时，如果超时且当前状态是Normal，则标记为Abnormal
      * @param timeoutSeconds 超时秒数（默认60秒）
-     * @return 如果进行了离线标记返回true，否则返回false
+     * @return 如果进行了异常标记返回true，否则返回false
      */
-    bool CheckAndMarkOfflineIfNeeded(int timeoutSeconds = 60) {
+    bool CheckAndMarkAbnormalIfNeeded(int timeoutSeconds = 60) {
         // 检查板卡是否在线（基于最后更新时间）
         bool isOnline = false;
         if (m_lastUpdateTime != std::chrono::system_clock::time_point::min()) {
@@ -114,16 +119,15 @@ public:
             isOnline = elapsed < timeoutSeconds;
         }
         
-        // 如果不在线且当前状态不是离线，则标记为离线
+        // 如果超时且当前状态是Normal，则标记为Abnormal
         if (!isOnline) {
-            if (m_status != BoardOperationalStatus::Offline) {
-                m_status = BoardOperationalStatus::Offline;
-                m_tasks.clear();
+            if (m_status == BoardOperationalStatus::Normal) {
+                m_status = BoardOperationalStatus::Abnormal;
                 // 保留更新时间，不清空，以便保留最后一次更新的时间信息
-                return true;  // 进行了离线标记
+                return true;  // 进行了异常标记
             }
         }
-        return false;  // 没有进行离线标记
+        return false;  // 没有进行异常标记
     }
 
 private:

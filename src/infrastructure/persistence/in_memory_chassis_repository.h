@@ -52,7 +52,6 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_chassisMap.find(chassisNumber);
         if (it != m_chassisMap.end()) {
-            spdlog::debug("InMemoryChassisRepository::FindByNumber: 找到机箱 {}", chassisNumber);
             return it->second;
         }
         spdlog::debug("InMemoryChassisRepository::FindByNumber: 未找到机箱 {}", chassisNumber);
@@ -71,7 +70,6 @@ public:
             result.push_back(pair.second);
         }
         
-        spdlog::debug("InMemoryChassisRepository::GetAll: 返回 {} 个机箱", result.size());
         return result;
     }
 
@@ -85,8 +83,6 @@ public:
             const auto& chassis = pair.second;
             auto board = chassis->GetBoardByAddress(boardAddress);
             if (board != nullptr) {
-                spdlog::debug("InMemoryChassisRepository::FindByBoardAddress: 找到板卡 {} 所属机箱 {}", 
-                              boardAddress, chassis->GetChassisNumber());
                 return chassis;
             }
         }
@@ -124,8 +120,8 @@ public:
             auto chassis = it->second;
             bool result = chassis->UpdateBoardBySlot(slotNumber, board);
             if (result) {
-                spdlog::debug("InMemoryChassisRepository::UpdateBoard: 成功更新机箱 {} 槽位 {} 的板卡", 
-                             chassisNumber, slotNumber);
+                // spdlog::debug("InMemoryChassisRepository::UpdateBoard: 成功更新机箱 {} 槽位 {} 的板卡", 
+                //              chassisNumber, slotNumber);
             } else {
                 spdlog::warn("InMemoryChassisRepository::UpdateBoard: 更新机箱 {} 槽位 {} 的板卡失败", 
                              chassisNumber, slotNumber);
@@ -135,6 +131,118 @@ public:
         
         spdlog::warn("InMemoryChassisRepository::UpdateBoard: 未找到机箱 {}", chassisNumber);
         return false;
+    }
+
+    /**
+     * @brief 通过机箱号和槽位号获取板卡对象
+     */
+    app::domain::Board* GetBoardBySlot(int chassisNumber, int slotNumber) override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        
+        auto it = m_chassisMap.find(chassisNumber);
+        if (it != m_chassisMap.end()) {
+            auto chassis = it->second;
+            auto* board = chassis->GetBoardBySlot(slotNumber);
+            if (board) {
+                // spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 找到机箱 {} 槽位 {} 的板卡", 
+                //              chassisNumber, slotNumber);
+            } else {
+                spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 机箱 {} 槽位 {} 无效", 
+                             chassisNumber, slotNumber);
+            }
+            return board;
+        }
+        
+        spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 未找到机箱 {}", chassisNumber);
+        return nullptr;
+    }
+
+    /**
+     * @brief 通过机箱号和槽位号获取板卡对象（const版本）
+     */
+    const app::domain::Board* GetBoardBySlot(int chassisNumber, int slotNumber) const override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        
+        auto it = m_chassisMap.find(chassisNumber);
+        if (it != m_chassisMap.end()) {
+            const auto& chassis = it->second;
+            const auto* board = chassis->GetBoardBySlot(slotNumber);
+            if (board) {
+                // spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 找到机箱 {} 槽位 {} 的板卡", 
+                //              chassisNumber, slotNumber);
+            } else {
+                spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 机箱 {} 槽位 {} 无效", 
+                             chassisNumber, slotNumber);
+            }
+            return board;
+        }
+        
+        spdlog::debug("InMemoryChassisRepository::GetBoardBySlot: 未找到机箱 {}", chassisNumber);
+        return nullptr;
+    }
+
+    /**
+     * @brief 批量更新指定机箱内所有板卡的状态（基于板卡在位信息）
+     */
+    size_t UpdateAllBoardsStatus(int chassisNumber, 
+                                const std::map<int, bool>& presenceMap) override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        
+        auto it = m_chassisMap.find(chassisNumber);
+        if (it == m_chassisMap.end()) {
+            spdlog::warn("InMemoryChassisRepository::UpdateAllBoardsStatus: 未找到机箱 {}", chassisNumber);
+            return 0;
+        }
+        
+        auto chassis = it->second;
+        size_t updatedCount = 0;
+        
+        for (const auto& [slotNumber, isPresent] : presenceMap) {
+            auto* board = chassis->GetBoardBySlot(slotNumber);
+            if (!board) {
+                spdlog::debug("InMemoryChassisRepository::UpdateAllBoardsStatus: 机箱 {} 槽位 {} 无效", 
+                             chassisNumber, slotNumber);
+                continue;
+            }
+            
+            auto currentStatus = board->GetStatus();
+            bool shouldUpdate = false;
+            app::domain::BoardOperationalStatus newStatus;
+            
+            if (!isPresent) {
+                // 板卡不在位：如果当前状态不是Offline，则更新为Offline
+                if (currentStatus != app::domain::BoardOperationalStatus::Offline) {
+                    newStatus = app::domain::BoardOperationalStatus::Offline;
+                    shouldUpdate = true;
+                }
+            } else {
+                // 板卡在位：若当前状态是Offline则更新为Abnormal，否则不更新
+                if (currentStatus == app::domain::BoardOperationalStatus::Offline) {
+                    newStatus = app::domain::BoardOperationalStatus::Abnormal;
+                    shouldUpdate = true;
+                }
+            }
+            
+            if (shouldUpdate) {
+                board->UpdateStatus(newStatus);
+                updatedCount++;
+                spdlog::debug("InMemoryChassisRepository::UpdateAllBoardsStatus: 更新机箱 {} 槽位 {} 状态: {} -> {}", 
+                             chassisNumber, slotNumber,
+                             currentStatus == app::domain::BoardOperationalStatus::Normal ? "正常" :
+                             currentStatus == app::domain::BoardOperationalStatus::Abnormal ? "异常" :
+                             currentStatus == app::domain::BoardOperationalStatus::Offline ? "离线" : "未知",
+                             newStatus == app::domain::BoardOperationalStatus::Normal ? "正常" :
+                             newStatus == app::domain::BoardOperationalStatus::Abnormal ? "异常" :
+                             newStatus == app::domain::BoardOperationalStatus::Offline ? "离线" : "未知");
+            }
+        }
+        
+        if (updatedCount > 0) {
+            spdlog::debug("InMemoryChassisRepository::UpdateAllBoardsStatus: 成功更新机箱 {} 的 {} 个板卡状态", 
+                         chassisNumber, updatedCount);
+        }
+        
+        return updatedCount;
     }
 
 private:

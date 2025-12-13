@@ -17,6 +17,7 @@ set(SOURCES
     src/interfaces/udp/resource_monitor_broadcaster.cpp
     src/interfaces/http/alert_receiver_server.cpp
     src/interfaces/cli/cli_service.cpp
+    src/interfaces/bmc/bmc_receiver.cpp
 )
 
 # 创建可执行文件
