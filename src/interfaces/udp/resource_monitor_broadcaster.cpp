@@ -18,6 +18,9 @@
 
 namespace app::interfaces {
 
+// 工作模式标签前缀
+static const std::string WORK_MODE_LABEL_PREFIX = "模式";
+
 // ResourceMonitorBroadcaster 实现
 ResourceMonitorBroadcaster::ResourceMonitorBroadcaster(
     std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
@@ -382,13 +385,21 @@ void ResourceMonitorBroadcaster::BuildTaskQueryResponse(TaskQueryResponse& respo
     response.boardIp = IpStringToUint32(board->GetAddress());
 
     // CPU使用率转换为千分比 (0-1000)
-    response.cpuUsage = static_cast<uint16_t>(resourceUsage->cpuUsage * 1000);
+    if (resourceUsage->cpuUsage > 1) {
+        response.cpuUsage = 1000;
+    } else {
+        response.cpuUsage = static_cast<uint16_t>(resourceUsage->cpuUsage * 1000);
+    }
 
     // 内存使用率（浮点类型，直接赋值）
-    response.memoryUsage = resourceUsage->memoryUsage;
+    if (resourceUsage->memoryUsage > 1) {
+        response.memoryUsage = 1.0f;
+    } else {
+        response.memoryUsage = resourceUsage->memoryUsage;
+    }
 
     spdlog::info("任务查询成功: taskID={} CPU={:.1f}% MEM={:.1f}%", 
-                 taskID, response.cpuUsage / 10.0, response.memoryUsage / 10.0);
+                 taskID, response.cpuUsage / 10.0f, response.memoryUsage * 100.0f);
 }
 
 uint32_t ResourceMonitorBroadcaster::IpStringToUint32(const std::string& ipStr) {
@@ -488,21 +499,18 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
 
     // 调用API启动新任务
     // startStrategy == 0 表示需要先停止当前任务，通过 stop 参数传递给 DeployStacks
-    int stop = (request.startStrategy == 0) ? 1 : 0;
+    int stop = 1;
+
+    // TODO startStrategy == 1
 
     // 如果请求的任务已经在运行，且不需要停止（startStrategy != 0），直接返回成功
     // 如果需要停止（startStrategy == 0），则允许重启任务
-    if (!currentLabel.empty() && currentLabel == label && stop == 0) {
-        spdlog::info("任务已在运行: {}", label);
-        response.startResult = 0;  // 成功
-        strncpy(response.resultDesc, "任务已在运行", 63);
-        return;
-    }
-    if (stop != 0) {
-        spdlog::info("开始启动新任务: {} (将停止当前任务)", label);
-    } else {
-        spdlog::info("开始启动新任务: {}", label);
-    }
+    // if (!currentLabel.empty() && currentLabel == label && stop == 0) {
+    //     spdlog::info("任务已在运行: {}", label);
+    //     response.startResult = 0;  // 成功
+    //     strncpy(response.resultDesc, "任务已在运行", 63);
+    //     return;
+    // }
     
     std::vector<std::string> labels;
     labels.push_back(label);
@@ -589,7 +597,7 @@ void ResourceMonitorBroadcaster::BuildTaskStopResponse(TaskStopResponse& respons
 std::string ResourceMonitorBroadcaster::WorkModeToLabel(uint16_t workMode) {
     // 将工作模式编号转换为标签名称，TODO 待修改
     // 例如：1 -> "模式1", 2 -> "模式2", 3 -> "模式3"
-    return "模式" + std::to_string(workMode);
+    return WORK_MODE_LABEL_PREFIX + std::to_string(workMode);
 }
 
 uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
@@ -600,11 +608,11 @@ uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
     }
     
     // 检查是否以"模式"开头（UTF-8编码中，"模式"占6个字节）
-    const std::string prefix = "模式";
-    if (label.length() >= prefix.length() && label.substr(0, prefix.length()) == prefix) {
+    if (label.length() >= WORK_MODE_LABEL_PREFIX.length() && 
+        label.substr(0, WORK_MODE_LABEL_PREFIX.length()) == WORK_MODE_LABEL_PREFIX) {
         try {
             // 提取"模式"后面的数字
-            std::string numStr = label.substr(prefix.length());
+            std::string numStr = label.substr(WORK_MODE_LABEL_PREFIX.length());
             return static_cast<uint16_t>(std::stoul(numStr));
         } catch (const std::exception&) {
             // 如果转换失败，返回0
