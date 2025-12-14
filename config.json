@@ -1,5 +1,5 @@
 {
-  "_comment": "715平台资源监控系统配置文件",
+  "_comment": "配置文件",
   "api": {
     "base_url": "localhost",
     "port": 8080,
@@ -8,7 +8,8 @@
       "stackinfo": "/api/v1/external/qyw/stackinfo",
       "deploy": "/api/v1/stacks/labels/deploy",
       "undeploy": "/api/v1/stacks/labels/undeploy",
-      "heartbeat": "/api/v1/sys-config/client/up"
+      "heartbeat": "/api/v1/sys-config/client/up",
+      "reset": "/api/v1/stacks/labels/reset"
     },
     "timeout": 30,
     "retry_count": 3,
@@ -16,7 +17,11 @@
     "password": "12q12w12ee"
   },
   "heartbeat": {
-    "client_ip": "192.168.6.222"
+    "client_ip": "192.168.6.222:8888"
+  },
+  "alert_server": {
+    "port": 8888,
+    "host": "0.0.0.0"
   },
   "udp": {
     "port": 4106,
@@ -29,26 +34,24 @@
     "commands": {
       "resource_monitor": "0xF000",
       "resource_monitor_resp": "0xF100",
-      "task_start": "0xF003",
-      "task_stop": "0xF004",
-      "task_query": "0xF005",
-      "task_start_resp": "0xF103",
-      "task_stop_resp": "0xF104",
-      "task_query_resp": "0xF105",
       "chassis_reset": "0xF001",
       "chassis_reset_resp": "0xF101",
       "chassis_self_check": "0xF002",
       "chassis_self_check_resp": "0xF102",
+      "task_start": "0xF003",
+      "task_start_resp": "0xF103",
+      "task_stop": "0xF004",
+      "task_stop_resp": "0xF104",
+      "task_query": "0xF005",
+      "task_query_resp": "0xF105",
+      "bmc_query": "0xF006",
+      "bmc_query_resp": "0xF106",
       "fault_report": "0xF107"
     }
   },
-  "alert_server": {
-    "port": 8888,
-    "host": "0.0.0.0"
-  },
   "collector": {
     "interval_seconds": 10,
-    "board_timeout_seconds": 120
+    "board_timeout_seconds": 60
   },
   "ha": {
     "enabled": true,
