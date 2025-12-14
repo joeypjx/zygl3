@@ -672,3 +672,208 @@ curl -v http://localhost:8888/api/v1/alert/board
 - 值太大：客户端可能一直等待更多数据
 - 最佳实践：确保Content-Length与实际响应体字节数完全一致
 
+---
+
+## HTTP响应格式错误处理说明
+
+### 当前代码的错误处理机制
+
+根据 `QywApiClient` 的实现，当接收到格式错误的HTTP响应时，代码会按以下方式处理：
+
+#### 1. HTTP状态码检查
+
+**处理逻辑：**
+- 如果 `HTTP状态码 != 200`：记录错误日志，返回空结果或 `false`
+- 如果 `res == nullptr`（连接失败）：记录错误日志，返回空结果或 `false`
+
+**示例代码：**
+```cpp
+if (res && res->status == 200) {
+    // 继续处理响应
+} else {
+    spdlog::error("获取板卡信息失败，状态码: {}", (res ? res->status : -1));
+    return result;  // 返回空结果
+}
+```
+
+**在Socket工具中模拟错误响应：**
+```
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+Content-Length: 50
+
+{"code":-1,"message":"服务器内部错误","data":null}
+```
+
+#### 2. JSON解析错误
+
+**处理逻辑：**
+- 使用 `try-catch` 捕获 `json::exception`
+- 捕获到异常时：记录错误日志（`spdlog::error`），返回空结果或 `false`
+- **不会抛出异常到上层**，程序继续运行
+
+**可能触发JSON解析错误的情况：**
+- 响应体不是有效的JSON格式
+- JSON格式不完整（被截断）
+- 响应体为空
+- 响应体包含非JSON内容（如HTML错误页面）
+
+**示例代码：**
+```cpp
+try {
+    json j = json::parse(res->body);
+    // 解析JSON...
+} catch (const json::exception& e) {
+    spdlog::error("JSON 解析错误: {}", e.what());
+    return result;  // 返回空结果
+}
+```
+
+**在Socket工具中模拟JSON错误响应：**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 20
+
+这不是有效的JSON格式
+```
+
+#### 3. 响应格式验证
+
+**处理逻辑：**
+- 检查 `code` 字段是否存在且为 `0`
+- 检查 `data` 字段是否存在
+- 如果格式不符合预期，**静默返回空结果**（不记录错误）
+
+**示例代码：**
+```cpp
+// 解析标准响应格式：{ "code": 0, "message": "success", "data": [...] }
+if (j.contains("code") && j["code"] == 0 && j.contains("data")) {
+    // 解析data字段...
+} else {
+    // 格式不符合，静默返回空result（不记录日志）
+    return result;
+}
+```
+
+**在Socket工具中模拟格式错误响应：**
+
+**情况1：code != 0**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 50
+
+{"code":-1,"message":"参数错误","data":null}
+```
+**处理结果**：静默返回空结果，不记录错误日志
+
+**情况2：缺少data字段**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 30
+
+{"code":0,"message":"success"}
+```
+**处理结果**：静默返回空结果，不记录错误日志
+
+**情况3：code字段缺失**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 30
+
+{"message":"success","data":[]}
+```
+**处理结果**：静默返回空结果，不记录错误日志
+
+#### 4. 字段缺失处理
+
+**处理逻辑：**
+- 使用 `value()` 方法提供默认值，字段缺失不会报错
+- 使用 `contains()` 检查可选字段是否存在
+- 缺失的字段会被设置为默认值（字符串为空，数字为0，数组为空）
+
+**示例代码：**
+```cpp
+boardInfo.chassisName = boardJson.value("chassisName", "");  // 缺失则默认为空字符串
+boardInfo.chassisNumber = boardJson.value("chassisNumber", 0);  // 缺失则默认为0
+
+if (boardJson.contains("fanSpeeds")) {  // 检查可选字段
+    // 解析fanSpeeds...
+}
+```
+
+**在Socket工具中模拟字段缺失响应：**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 80
+
+{"code":0,"message":"success","data":[{"chassisNumber":1,"boardNumber":1}]}
+```
+**处理结果**：缺失的字段（如`chassisName`、`boardAddress`等）会被设置为默认值，不会报错
+
+### 错误处理总结
+
+| 错误类型 | 处理方式 | 日志级别 | 返回值 |
+|---------|---------|---------|--------|
+| HTTP状态码 != 200 | 记录错误日志 | `error` | 空结果/`false` |
+| 连接失败 (res == nullptr) | 记录错误日志 | `error` | 空结果/`false` |
+| JSON解析异常 | 记录错误日志 | `error` | 空结果/`false` |
+| code != 0 | 静默处理 | 无日志 | 空结果 |
+| 缺少data字段 | 静默处理 | 无日志 | 空结果 |
+| 缺少code字段 | 静默处理 | 无日志 | 空结果 |
+| 字段缺失（使用value默认值） | 使用默认值 | 无日志 | 正常处理 |
+
+### 测试建议
+
+在Socket工具中测试时，可以模拟以下错误场景：
+
+1. **HTTP错误状态码**：
+   ```
+   HTTP/1.1 404 Not Found
+   HTTP/1.1 500 Internal Server Error
+   HTTP/1.1 503 Service Unavailable
+   ```
+
+2. **无效JSON格式**：
+   ```
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+   
+   这不是JSON
+   ```
+
+3. **格式不符合预期**：
+   ```
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+   
+   {"code":-1,"message":"错误","data":null}
+   ```
+
+4. **字段缺失**：
+   ```
+   HTTP/1.1 200 OK
+   Content-Type: application/json
+   
+   {"code":0,"data":[]}
+   ```
+
+### 注意事项
+
+1. **静默失败**：某些格式错误（如`code != 0`）会静默返回空结果，不会记录错误日志，这可能导致问题难以发现。
+
+2. **建议改进**：可以考虑在格式不符合预期时也记录警告日志，便于调试：
+   ```cpp
+   if (!j.contains("code") || j["code"] != 0 || !j.contains("data")) {
+       spdlog::warn("响应格式不符合预期: code={}, hasData={}", 
+                    j.value("code", -1), j.contains("data"));
+       return result;
+   }
+   ```
+
+3. **GetStackInfo特殊处理**：`GetStackInfo` 方法使用 `success` 参数来明确表示API调用是否成功，这是更好的设计模式。
+

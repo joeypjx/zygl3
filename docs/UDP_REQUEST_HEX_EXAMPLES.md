@@ -685,3 +685,164 @@ request = create_operation_model("RESET", "192.168.2.180", [1, 2], 1)
 print(' '.join(f'{b:02X}' for b in request))
 ```
 
+---
+
+## UDP请求报文格式错误处理说明
+
+### 当前代码的错误处理机制
+
+根据 `ResourceMonitorListener::ListenLoop()` 的实现，当接收到格式错误的UDP请求报文时，代码会按以下方式处理：
+
+#### 1. 接收长度检查
+
+**处理逻辑：**
+- 如果 `recvLen <= 0`：直接忽略，继续监听下一个报文（**不记录日志**）
+- 如果 `recvLen < 24`：直接忽略，继续监听（至少需要24字节才能读取命令码，header[22] + command[2]）
+
+**代码位置：**
+```cpp
+// 至少需要24字节才能读取命令码（header[22] + command[2]）
+if (recvLen > 0 && recvLen >= 24) {
+    // 处理报文...
+}
+// 如果 recvLen < 24，直接跳过，不记录日志
+```
+
+**示例场景：**
+- 接收到10字节的无效数据：静默忽略
+- 接收到20字节的无效数据：静默忽略（不够24字节）
+
+#### 2. 命令码检查
+
+**处理逻辑：**
+- 从 `buffer[22-23]` 读取命令码（2字节）
+- 如果命令码不匹配任何已知命令码：**静默忽略**，继续监听（**不记录日志**）
+
+**已知命令码：**
+- `0xF000` - 资源监控请求
+- `0xF005` - 任务查看请求
+- `0xF003` - 任务启动请求
+- `0xF004` - 任务停止请求
+- `0xF001` - 机箱复位请求
+- `0xF002` - 机箱自检请求
+- `0xF006` - BMC查询请求
+
+**代码位置：**
+```cpp
+uint16_t command;
+memcpy(&command, buffer + 22, 2);
+
+// 根据命令码检查对应的请求大小
+if (command == m_cmdResourceMonitor && recvLen >= sizeof(ResourceMonitorRequest)) {
+    // 处理资源监控请求...
+}
+else if (command == m_cmdTaskQuery && recvLen >= sizeof(TaskQueryRequest)) {
+    // 处理任务查看请求...
+}
+// ... 其他命令码检查
+// 如果命令码不匹配任何已知命令码，静默忽略
+```
+
+**示例场景：**
+- 接收到命令码 `0xFFFF`：静默忽略，不记录日志
+- 接收到命令码 `0x0000`：静默忽略，不记录日志
+
+#### 3. 报文长度检查
+
+**处理逻辑：**
+- 每个命令码都有对应的最小长度要求（使用 `sizeof(RequestStruct)` 检查）
+- 如果 `recvLen < sizeof(RequestStruct)`：**静默忽略**，继续监听（**不记录日志**）
+
+**各请求的最小长度：**
+- `ResourceMonitorRequest`: 28 字节
+- `TaskQueryRequest`: 34 字节
+- `TaskStartRequest`: 32 字节
+- `TaskStopRequest`: 28 字节
+- `ChassisResetRequest`: 136 字节
+- `ChassisSelfCheckRequest`: 42 字节
+- `BmcQueryRequest`: 28 字节
+
+**代码位置：**
+```cpp
+if (command == m_cmdResourceMonitor && recvLen >= sizeof(ResourceMonitorRequest)) {
+    // 处理请求...
+}
+// 如果 recvLen < sizeof(ResourceMonitorRequest)，静默忽略
+```
+
+**示例场景：**
+- 命令码正确（0xF000），但长度只有25字节（需要28字节）：静默忽略
+- 命令码正确（0xF001），但长度只有100字节（需要136字节）：静默忽略
+
+#### 4. 报文头部格式检查
+
+**当前实现：**
+- **不检查**报文头部的格式（如total length、magic number等）
+- 只要长度足够，命令码匹配，就会尝试处理
+- 如果头部格式错误，可能导致解析错误或数据错误
+
+**潜在问题：**
+- 如果header中的total length字段与实际长度不匹配，不会检测
+- 如果header中的magic number（0xFFFF）错误，不会检测
+- 可能导致使用错误的数据进行后续处理
+
+### 错误处理总结
+
+| 错误类型 | 处理方式 | 日志级别 | 行为 |
+|---------|---------|---------|------|
+| recvLen <= 0 | 静默忽略 | 无日志 | 继续监听 |
+| recvLen < 24 | 静默忽略 | 无日志 | 继续监听 |
+| 命令码不匹配 | 静默忽略 | 无日志 | 继续监听 |
+| 报文长度不足 | 静默忽略 | 无日志 | 继续监听 |
+| 头部格式错误 | 不检查 | 无日志 | 可能错误处理 |
+
+### 测试建议
+
+在Socket工具中测试时，可以模拟以下错误场景：
+
+1. **长度不足的报文**：
+   - 发送10字节的无效数据
+   - 发送20字节的无效数据（不够24字节）
+   - **预期行为**：静默忽略，不记录日志
+
+2. **命令码错误**：
+   - 发送24字节的报文，但命令码为 `0xFFFF`
+   - **预期行为**：静默忽略，不记录日志
+
+3. **长度不匹配**：
+   - 发送命令码为 `0xF000`，但长度只有25字节（需要28字节）
+   - **预期行为**：静默忽略，不记录日志
+
+4. **头部格式错误**：
+   - 发送长度正确的报文，但header中的total length字段错误
+   - **预期行为**：可能被处理，但可能导致数据错误（当前不检查）
+
+### 注意事项
+
+1. **静默失败**：所有格式错误都会静默忽略，不记录任何日志，这可能导致问题难以发现和调试。
+
+2. **建议改进**：可以考虑添加日志记录，便于调试：
+   ```cpp
+   if (recvLen > 0 && recvLen < 24) {
+       spdlog::debug("收到UDP数据包长度不足: {} 字节（至少需要24字节）", recvLen);
+       continue;
+   }
+   
+   // 如果命令码不匹配
+   if (command != m_cmdResourceMonitor && command != m_cmdTaskQuery && ...) {
+       spdlog::debug("收到未知命令码: 0x{:04X}", command);
+       continue;
+   }
+   
+   // 如果长度不匹配
+   if (command == m_cmdResourceMonitor && recvLen < sizeof(ResourceMonitorRequest)) {
+       spdlog::warn("资源监控请求长度不足: {} 字节（需要 {} 字节）", 
+                    recvLen, sizeof(ResourceMonitorRequest));
+       continue;
+   }
+   ```
+
+3. **安全性考虑**：当前实现不验证报文头部的格式，恶意构造的报文可能被处理，建议添加头部格式验证。
+
+4. **调试工具**：代码中已经包含了 `UdpDataPrinter::PrintReceivedDataSimple()` 调用，可以打印接收到的原始数据，便于调试格式错误。
+
