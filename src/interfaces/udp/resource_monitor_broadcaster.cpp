@@ -339,8 +339,8 @@ void ResourceMonitorBroadcaster::BuildTaskQueryResponse(TaskQueryResponse& respo
     // 2. 从板卡获取任务列表，根据任务序号获取taskID
     // request.taskIndex 从1开始，所以需要减1
     const auto& tasks = board->GetTasks();
-    if (request.taskIndex - 1 < 0 || request.taskIndex - 1 > tasks.size()) {
-        spdlog::error("任务序号超出范围: taskIndex={}", request.taskIndex);
+    if (request.taskIndex < 1 || request.taskIndex > tasks.size()) {
+        spdlog::error("任务序号超出范围: taskIndex={}, tasks.size()={}", request.taskIndex, tasks.size());
         response.taskStatus = 1;  // 异常
         return;
     }
