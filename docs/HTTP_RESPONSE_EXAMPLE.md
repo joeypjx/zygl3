@@ -7,96 +7,9 @@
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 1234
+Content-Length: 1283
 
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    {
-      "chassisName": "机箱1",
-      "chassisNumber": 1,
-      "boardName": "板卡1",
-      "boardNumber": 1,
-      "boardType": 1,
-      "boardAddress": "192.168.1.100",
-      "boardStatus": 0,
-      "voltage": 12.5,
-      "current": 2.3,
-      "temperature": 45.6,
-      "fanSpeeds": [
-        {
-          "fanName": "风扇1",
-          "speed": 3000
-        },
-        {
-          "fanName": "风扇2",
-          "speed": 2800
-        }
-      ],
-      "taskInfos": [
-        {
-          "taskID": "task-001",
-          "taskStatus": 1,
-          "serviceName": "算法组件1",
-          "serviceUUID": "service-uuid-001",
-          "stackName": "业务链路1",
-          "stackUUID": "stack-uuid-001"
-        },
-        {
-          "taskID": "task-002",
-          "taskStatus": 1,
-          "serviceName": "算法组件2",
-          "serviceUUID": "service-uuid-002",
-          "stackName": "业务链路1",
-          "stackUUID": "stack-uuid-001"
-        }
-      ]
-    },
-    {
-      "chassisName": "机箱1",
-      "chassisNumber": 1,
-      "boardName": "板卡2",
-      "boardNumber": 2,
-      "boardType": 1,
-      "boardAddress": "192.168.1.101",
-      "boardStatus": 0,
-      "voltage": 12.3,
-      "current": 2.1,
-      "temperature": 42.3,
-      "fanSpeeds": [
-        {
-          "fanName": "风扇1",
-          "speed": 2900
-        }
-      ],
-      "taskInfos": []
-    },
-    {
-      "chassisName": "机箱2",
-      "chassisNumber": 2,
-      "boardName": "板卡1",
-      "boardNumber": 1,
-      "boardType": 2,
-      "boardAddress": "192.168.1.200",
-      "boardStatus": 1,
-      "voltage": 11.8,
-      "current": 1.9,
-      "temperature": 48.5,
-      "fanSpeeds": [],
-      "taskInfos": [
-        {
-          "taskID": "task-003",
-          "taskStatus": 3,
-          "serviceName": "算法组件3",
-          "serviceUUID": "service-uuid-003",
-          "stackName": "业务链路2",
-          "stackUUID": "stack-uuid-002"
-        }
-      ]
-    }
-  ]
-}
+{"code":0,"message":"success","data":[{"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board1","boardNumber":1,"boardType":1,"boardAddress":"192.168.1.100","boardStatus":0,"voltage":12.5,"current":2.3,"temperature":45.6,"fanSpeeds":[{"fanName":"Fan1","speed":3000},{"fanName":"Fan2","speed":2800}],"taskInfos":[{"taskID":"task-001","taskStatus":1,"serviceName":"AlgorithmComponent1","serviceUUID":"service-uuid-001","stackName":"BusinessLink1","stackUUID":"stack-uuid-001"},{"taskID":"task-002","taskStatus":1,"serviceName":"AlgorithmComponent2","serviceUUID":"service-uuid-002","stackName":"BusinessLink1","stackUUID":"stack-uuid-001"}]},{"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board2","boardNumber":2,"boardType":1,"boardAddress":"192.168.1.101","boardStatus":0,"voltage":12.3,"current":2.1,"temperature":42.3,"fanSpeeds":[{"fanName":"Fan1","speed":2900}],"taskInfos":[]},{"chassisName":"Chassis2","chassisNumber":2,"boardName":"Board1","boardNumber":1,"boardType":2,"boardAddress":"192.168.1.200","boardStatus":1,"voltage":11.8,"current":1.9,"temperature":48.5,"fanSpeeds":[],"taskInfos":[{"taskID":"task-003","taskStatus":3,"serviceName":"AlgorithmComponent3","serviceUUID":"service-uuid-003","stackName":"BusinessLink2","stackUUID":"stack-uuid-002"}]}]}
 ```
 
 ### 字段说明：
@@ -133,54 +46,9 @@ Content-Length: 1234
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 2345
+Content-Length: 665
 
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    {
-      "stackName": "业务链路1",
-      "stackUUID": "stack-uuid-001",
-      "stackLabelInfos": [
-        {
-          "stackLabelName": "模式1",
-          "stackLabelUUID": "label-uuid-001"
-        }
-      ],
-      "stackDeployStatus": 1,
-      "stackRunningStatus": 1,
-      "serviceInfos": [
-        {
-          "serviceName": "算法组件1",
-          "serviceUUID": "service-uuid-001",
-          "serviceStatus": 2,
-          "serviceType": 0,
-          "taskInfos": [
-            {
-              "taskID": "task-001",
-              "taskStatus": 1,
-              "cpuCores": 4.0,
-              "cpuUsed": 1.5,
-              "cpuUsage": 37.5,
-              "memorySize": 8192.0,
-              "memoryUsed": 2048.0,
-              "memoryUsage": 25.0,
-              "netReceive": 1024.5,
-              "netSent": 512.3,
-              "gpuMemUsed": 0.0,
-              "chassisName": "机箱1",
-              "chassisNumber": 1,
-              "boardName": "板卡1",
-              "boardNumber": 1,
-              "boardAddress": "192.168.1.100"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+{"code":0,"message":"success","data":[{"stackName":"BusinessLink1","stackUUID":"stack-uuid-001","stackLabelInfos":[{"stackLabelName":"Mode1","stackLabelUUID":"label-uuid-001"}],"stackDeployStatus":1,"stackRunningStatus":1,"serviceInfos":[{"serviceName":"AlgorithmComponent1","serviceUUID":"service-uuid-001","serviceStatus":2,"serviceType":0,"taskInfos":[{"taskID":"task-001","taskStatus":1,"cpuCores":4.0,"cpuUsed":1.5,"cpuUsage":37.5,"memorySize":8192.0,"memoryUsed":2048.0,"memoryUsage":25.0,"netReceive":1024.5,"netSent":512.3,"gpuMemUsed":0.0,"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board1","boardNumber":1,"boardAddress":"192.168.1.100"}]}]}]}
 ```
 
 ---
@@ -192,13 +60,9 @@ Content-Length: 2345
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 45
+Content-Length: 47
 
-{
-  "code": 0,
-  "message": "success",
-  "data": "success"
-}
+{"code":0,"message":"success","data":"success"}
 ```
 
 ---
@@ -210,30 +74,9 @@ Content-Length: 45
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 456
+Content-Length: 280
 
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    {
-      "successStackInfos": [
-        {
-          "stackName": "业务链路1",
-          "stackUUID": "stack-uuid-001",
-          "message": "部署成功"
-        }
-      ],
-      "failureStackInfos": [
-        {
-          "stackName": "业务链路2",
-          "stackUUID": "stack-uuid-002",
-          "message": "部署失败：资源不足"
-        }
-      ]
-    }
-  ]
-}
+{"code":0,"message":"success","data":[{"successStackInfos":[{"stackName":"BusinessLink1","stackUUID":"stack-uuid-001","message":"Deploy success"}],"failureStackInfos":[{"stackName":"BusinessLink2","stackUUID":"stack-uuid-002","message":"Deploy failed: Insufficient resources"}]}]}
 ```
 
 ---
@@ -245,24 +88,9 @@ Content-Length: 456
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 456
+Content-Length: 174
 
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    {
-      "successStackInfos": [
-        {
-          "stackName": "业务链路1",
-          "stackUUID": "stack-uuid-001",
-          "message": "停用成功"
-        }
-      ],
-      "failureStackInfos": []
-    }
-  ]
-}
+{"code":0,"message":"success","data":[{"successStackInfos":[{"stackName":"BusinessLink1","stackUUID":"stack-uuid-001","message":"Undeploy success"}],"failureStackInfos":[]}]}
 ```
 
 ---
@@ -274,13 +102,9 @@ Content-Length: 456
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 45
+Content-Length: 47
 
-{
-  "code": 0,
-  "message": "success",
-  "data": "success"
-}
+{"code":0,"message":"success","data":"success"}
 ```
 
 ---
@@ -293,21 +117,9 @@ Content-Length: 45
 POST /api/v1/alert/board HTTP/1.1
 Host: localhost:8888
 Content-Type: application/json
-Content-Length: 234
+Content-Length: 228
 
-{
-  "chassisName": "机箱1",
-  "chassisNumber": 1,
-  "boardName": "板卡1",
-  "boardNumber": 1,
-  "boardType": 1,
-  "boardAddress": "192.168.1.100",
-  "boardStatus": 1,
-  "alertMessages": [
-    "板卡温度过高：65°C",
-    "板卡电压异常：11.2V"
-  ]
-}
+{"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board1","boardNumber":1,"boardType":1,"boardAddress":"192.168.1.100","boardStatus":1,"alertMessages":["Board temperature too high: 65°C","Board voltage abnormal: 11.2V"]}
 ```
 
 ### HTTP响应示例：
@@ -315,13 +127,9 @@ Content-Length: 234
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 45
+Content-Length: 47
 
-{
-  "code": 0,
-  "message": "success",
-  "data": "success"
-}
+{"code":0,"message":"success","data":"success"}
 ```
 
 ### 字段说明：
@@ -341,7 +149,7 @@ POST /api/v1/alert/board HTTP/1.1
 Host: localhost:8888
 Content-Type: application/json
 
-{"chassisNumber":1,"boardNumber":1,"boardAddress":"192.168.1.100","boardStatus":1,"alertMessages":["板卡异常"]}
+{"chassisNumber":1,"boardNumber":1,"boardAddress":"192.168.1.100","boardStatus":1,"alertMessages":["Board abnormal"]}
 ```
 
 ---
@@ -354,45 +162,9 @@ Content-Type: application/json
 POST /api/v1/alert/service HTTP/1.1
 Host: localhost:8888
 Content-Type: application/json
-Content-Length: 567
+Content-Length: 616
 
-{
-  "stackName": "业务链路1",
-  "stackUUID": "stack-uuid-001",
-  "serviceName": "算法组件1",
-  "serviceUUID": "service-uuid-001",
-  "taskAlertInfos": [
-    {
-      "taskID": "task-001",
-      "taskStatus": 3,
-      "chassisName": "机箱1",
-      "chassisNumber": 1,
-      "boardName": "板卡1",
-      "boardNumber": 1,
-      "boardType": 1,
-      "boardAddress": "192.168.1.100",
-      "boardStatus": 1,
-      "alertMessages": [
-        "任务CPU使用率过高：95%",
-        "任务内存溢出"
-      ]
-    },
-    {
-      "taskID": "task-002",
-      "taskStatus": 3,
-      "chassisName": "机箱1",
-      "chassisNumber": 1,
-      "boardName": "板卡2",
-      "boardNumber": 2,
-      "boardType": 1,
-      "boardAddress": "192.168.1.101",
-      "boardStatus": 0,
-      "alertMessages": [
-        "任务响应超时"
-      ]
-    }
-  ]
-}
+{"stackName":"BusinessLink1","stackUUID":"stack-uuid-001","serviceName":"AlgorithmComponent1","serviceUUID":"service-uuid-001","taskAlertInfos":[{"taskID":"task-001","taskStatus":3,"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board1","boardNumber":1,"boardType":1,"boardAddress":"192.168.1.100","boardStatus":1,"alertMessages":["Task CPU usage too high: 95%","Task memory overflow"]},{"taskID":"task-002","taskStatus":3,"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board2","boardNumber":2,"boardType":1,"boardAddress":"192.168.1.101","boardStatus":0,"alertMessages":["Task response timeout"]}]}
 ```
 
 ### HTTP响应示例：
@@ -400,13 +172,9 @@ Content-Length: 567
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 45
+Content-Length: 47
 
-{
-  "code": 0,
-  "message": "success",
-  "data": "success"
-}
+{"code":0,"message":"success","data":"success"}
 ```
 
 ### 字段说明：
@@ -433,7 +201,7 @@ POST /api/v1/alert/service HTTP/1.1
 Host: localhost:8888
 Content-Type: application/json
 
-{"stackName":"业务链路1","stackUUID":"stack-uuid-001","serviceName":"算法组件1","serviceUUID":"service-uuid-001","taskAlertInfos":[{"taskID":"task-001","taskStatus":3,"chassisNumber":1,"boardNumber":1,"boardAddress":"192.168.1.100","alertMessages":["任务异常"]}]}
+{"stackName":"BusinessLink1","stackUUID":"stack-uuid-001","serviceName":"AlgorithmComponent1","serviceUUID":"service-uuid-001","taskAlertInfos":[{"taskID":"task-001","taskStatus":3,"chassisNumber":1,"boardNumber":1,"boardAddress":"192.168.1.100","alertMessages":["Task abnormal"]}]}
 ```
 
 ---
@@ -487,8 +255,8 @@ Content-Type: application/json
 ```json
 {"code":0,"message":"success","data":"success"}
 ```
-- 字符数：45个字符
-- Content-Length: `45`
+- 字符数：47个字符
+- Content-Length: `47`
 
 **示例2：格式化JSON（注意空格和换行）**
 ```json
@@ -566,13 +334,13 @@ size_t content_length = response_body.length();  // 对于ASCII字符，length()
   ```json
   {"code":0,"message":"success","data":"success"}
   ```
-  - 字节数：45 字节
+  - 字节数：47 字节
 
 **推荐使用紧凑版本：**
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 45
+Content-Length: 47
 
 {"code":0,"message":"success","data":"success"}
 ```
@@ -581,13 +349,13 @@ Content-Length: 45
 
 **响应体（紧凑格式）：**
 ```json
-{"code":0,"message":"success","data":[{"chassisName":"机箱1","chassisNumber":1,"boardName":"板卡1","boardNumber":1,"boardType":1,"boardAddress":"192.168.1.100","boardStatus":0,"voltage":12.5,"current":2.3,"temperature":45.6,"fanSpeeds":[],"taskInfos":[]}]}
+{"code":0,"message":"success","data":[{"chassisName":"Chassis1","chassisNumber":1,"boardName":"Board1","boardNumber":1,"boardType":1,"boardAddress":"192.168.1.100","boardStatus":0,"voltage":12.5,"current":2.3,"temperature":45.6,"fanSpeeds":[],"taskInfos":[]}]}
 ```
 
 **计算：**
 - 中文字符在UTF-8编码中通常占3字节
-- "机箱1" = 3 + 3 + 1 = 7字节
-- "板卡1" = 3 + 3 + 1 = 7字节
+- "Chassis1" = 8字节（纯ASCII）
+- "Board1" = 6字节（纯ASCII）
 - 总字节数需要实际计算
 
 **使用Python计算：**
@@ -598,9 +366,9 @@ data = {
     "code": 0,
     "message": "success",
     "data": [{
-        "chassisName": "机箱1",
+        "chassisName": "Chassis1",
         "chassisNumber": 1,
-        "boardName": "板卡1",
+        "boardName": "Board1",
         "boardNumber": 1,
         "boardType": 1,
         "boardAddress": "192.168.1.100",
@@ -700,9 +468,9 @@ if (res && res->status == 200) {
 ```
 HTTP/1.1 500 Internal Server Error
 Content-Type: application/json
-Content-Length: 50
+Content-Length: 57
 
-{"code":-1,"message":"服务器内部错误","data":null}
+{"code":-1,"message":"Internal server error","data":null}
 ```
 
 #### 2. JSON解析错误
@@ -733,7 +501,7 @@ try {
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 20
+Content-Length: 28
 
 这不是有效的JSON格式
 ```
@@ -762,9 +530,9 @@ if (j.contains("code") && j["code"] == 0 && j.contains("data")) {
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 50
+Content-Length: 51
 
-{"code":-1,"message":"参数错误","data":null}
+{"code":-1,"message":"Parameter error","data":null}
 ```
 **处理结果**：静默返回空结果，不记录错误日志
 
@@ -782,7 +550,7 @@ Content-Length: 30
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 30
+Content-Length: 31
 
 {"message":"success","data":[]}
 ```
@@ -809,7 +577,7 @@ if (boardJson.contains("fanSpeeds")) {  // 检查可选字段
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 80
+Content-Length: 75
 
 {"code":0,"message":"success","data":[{"chassisNumber":1,"boardNumber":1}]}
 ```
@@ -851,7 +619,7 @@ Content-Length: 80
    HTTP/1.1 200 OK
    Content-Type: application/json
    
-   {"code":-1,"message":"错误","data":null}
+   {"code":-1,"message":"Error","data":null}
    ```
 
 4. **字段缺失**：
