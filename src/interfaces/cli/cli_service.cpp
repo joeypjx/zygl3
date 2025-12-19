@@ -841,7 +841,7 @@ void CliService::PrintAllStacksFullInfo() {
                                 }
                             }
                             if (resources.cpuUsage > 0) {
-                                std::cout << std::setprecision(1) << resources.cpuUsage << "%";
+                                std::cout << std::setprecision(1) << resources.cpuUsage*100.0f << "%";
                             }
                             std::cout << std::endl;
                             hasResources = true;
@@ -858,7 +858,7 @@ void CliService::PrintAllStacksFullInfo() {
                                 }
                             }
                             if (resources.memoryUsage > 0) {
-                                std::cout << std::setprecision(1) << resources.memoryUsage << "%";
+                                std::cout << std::setprecision(1) << resources.memoryUsage*100.0f << "%";
                             }
                             std::cout << std::endl;
                             hasResources = true;

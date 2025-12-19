@@ -56,7 +56,7 @@ protected:
 TEST_F(RWJKTest, TC_CollectStackInfo_Success) {
     // 创建数据采集服务，设置较短的采集间隔以便快速测试
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务（会触发CollectLoop，进而调用CollectStackInfo）
     collector->Start();
@@ -97,7 +97,7 @@ TEST_F(RWJKTest, TC_CollectStackInfo_Failure) {
     // 创建数据采集服务
     // 使用无效的API地址或端口，确保API调用失败或返回空数据
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();

@@ -26,6 +26,7 @@ set(MAIN_SOURCES
     ${CMAKE_SOURCE_DIR}/../src/infrastructure/api_client/qyw_api_client.cpp
     ${CMAKE_SOURCE_DIR}/../src/infrastructure/collectors/data_collector_service.cpp
     ${CMAKE_SOURCE_DIR}/../src/infrastructure/controller/resource_controller.cpp
+    ${CMAKE_SOURCE_DIR}/../src/infrastructure/utils/udp_data_printer.cpp
     ${CMAKE_SOURCE_DIR}/../src/interfaces/udp/resource_monitor_broadcaster.cpp
     ${CMAKE_SOURCE_DIR}/../src/interfaces/http/alert_receiver_server.cpp
     ${CMAKE_SOURCE_DIR}/../src/interfaces/cli/cli_service.cpp

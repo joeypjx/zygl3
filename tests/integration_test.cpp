@@ -101,7 +101,7 @@
      
      // 创建数据采集服务，设置较短的采集间隔以便快速测试
      collector = std::make_shared<DataCollectorService>(
-         chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+         chassisRepo, stackRepo, apiClient, 1, 120);
      
      // 启动服务（会触发CollectLoop，进而调用CollectBoardInfo）
      collector->Start();
@@ -133,11 +133,11 @@
      testChassis->ResizeBoards(14);
      
      // 创建板卡对象，设置IP地址为192.168.0.101（与告警请求中的IP地址匹配）
-     Board board("192.168.0.101", 1, BoardType::Computing);
+     Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
      // 使用UpdateFromApiData初始化板卡状态为正常
      std::vector<app::domain::FanSpeed> fanSpeeds;
      std::vector<TaskStatusInfo> tasks;
-     board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
+     board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
      
      // 将板卡添加到机箱
      auto* boardPtr = testChassis->GetBoardBySlot(1);
@@ -156,7 +156,7 @@
      
      // 创建告警接收服务器
      alertServer = std::make_shared<AlertReceiverServer>(
-         chassisRepo, stackRepo, broadcaster, 8889, "127.0.0.1");
+         chassisRepo, stackRepo, broadcaster, apiClient, "127.0.0.1", nullptr, 8889);
      
      // 启动服务器
      alertServer->Start();
@@ -319,7 +319,7 @@
 TEST_F(IntegrationTest, TC_CollectStackInfo_Success) {
     // 创建数据采集服务，设置较短的采集间隔以便快速测试
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务（会触发CollectLoop，进而调用CollectStackInfo）
     collector->Start();
@@ -373,7 +373,7 @@ TEST_F(IntegrationTest, TC_DeployStacks_Success) {
     // 集成测试：验证部署操作后，数据采集服务能够收集到新的业务链路信息
     // 创建数据采集服务
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();
@@ -420,7 +420,7 @@ TEST_F(IntegrationTest, TC_UndeployStacks_Success) {
     // 集成测试：验证停用操作后，数据采集服务能够更新业务链路状态
     // 创建数据采集服务
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();
@@ -476,17 +476,17 @@ TEST_F(IntegrationTest, TC_SendTaskQueryResponse_Success) {
     chassis->ResizeBoards(14);
     
     // 添加板卡数据
-    Board board("192.168.0.101", 1, BoardType::Computing);
+    Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
     
     // 添加任务到板卡
     TaskStatusInfo taskInfo;
     taskInfo.taskID = "task-1";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
@@ -650,7 +650,7 @@ TEST_F(IntegrationTest, TC_Stack_SaveSuccess) {
     auto chassis = TestDataGenerator::CreateTestChassis(1, "TestChassis_1");
     chassis->ResizeBoards(14);
     
-    Board board("192.168.0.101", 1, BoardType::Computing);
+    Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
     
@@ -659,7 +659,7 @@ TEST_F(IntegrationTest, TC_Stack_SaveSuccess) {
     taskInfo.taskID = "task-from-stack";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
@@ -815,7 +815,7 @@ TEST_F(IntegrationTest, TC_Stack_GetAll_Success) {
     auto chassis = TestDataGenerator::CreateTestChassis(1, "TestChassis_1");
     chassis->ResizeBoards(14);
     
-    Board board("192.168.0.101", 1, BoardType::Computing);
+    Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
     
@@ -824,7 +824,7 @@ TEST_F(IntegrationTest, TC_Stack_GetAll_Success) {
     taskInfo.taskID = "task-from-stack-1";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);

@@ -88,7 +88,7 @@ TEST_F(ZYJKTest, TC_CollectBoardInfo_Success) {
     
     // 创建数据采集服务，设置较短的采集间隔以便快速测试
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务（会触发CollectLoop，进而调用CollectBoardInfo）
     collector->Start();
@@ -123,7 +123,7 @@ TEST_F(ZYJKTest, TC_CollectBoardInfo_Failure1) {
     // 创建数据采集服务
     // 使用无效的API地址或端口，确保API调用失败或返回空数据
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();
@@ -155,7 +155,7 @@ TEST_F(ZYJKTest, TC_CollectBoardInfo_Failure2) {
     
     // 创建数据采集服务
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();
@@ -196,7 +196,7 @@ TEST_F(ZYJKTest, TC_CollectBoardInfo_Failure3) {
     
     // 创建数据采集服务
     collector = std::make_shared<DataCollectorService>(
-        chassisRepo, stackRepo, apiClient, "192.168.6.222", 1, 120);
+        chassisRepo, stackRepo, apiClient, 1, 120);
     
     // 启动服务
     collector->Start();
@@ -229,11 +229,11 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
     testChassis->ResizeBoards(14);
     
     // 创建板卡对象，设置IP地址为192.168.0.101（与告警请求中的IP地址匹配）
-    Board board("192.168.0.101", 1, BoardType::Computing);
+    Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     // 使用UpdateFromApiData初始化板卡状态为正常
     std::vector<app::domain::FanSpeed> fanSpeeds;
     std::vector<TaskStatusInfo> tasks;
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::Computing, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
     
     // 将板卡添加到机箱
     auto* boardPtr = testChassis->GetBoardBySlot(1);
@@ -252,7 +252,7 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
     
     // 创建告警接收服务器
     alertServer = std::make_shared<AlertReceiverServer>(
-        chassisRepo, stackRepo, broadcaster, 8889, "127.0.0.1");
+        chassisRepo, stackRepo, broadcaster, apiClient, "127.0.0.1", nullptr, 8889);
     
     // 启动服务器
     alertServer->Start();
@@ -348,7 +348,7 @@ TEST_F(ZYJKTest, TC_HandleBoardAlert_Success) {
 TEST_F(ZYJKTest, TC_HandleBoardAlert_Failure) {
     // 创建告警接收服务器
     alertServer = std::make_shared<AlertReceiverServer>(
-        chassisRepo, stackRepo, broadcaster, 8890, "127.0.0.1");
+        chassisRepo, stackRepo, broadcaster, apiClient, "127.0.0.1", nullptr, 8890);
     
     // 启动服务器
     alertServer->Start();

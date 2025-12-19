@@ -126,11 +126,11 @@ def generate_mock_stack_data(stack_labels=None):
                     # 生成资源使用情况
                     cpu_cores = round(random.uniform(2.0, 16.0), 2)
                     cpu_used = round(random.uniform(0.5, cpu_cores * 0.8), 2)
-                    cpu_usage = round((cpu_used / cpu_cores) * 100, 2) if cpu_cores > 0 else 0
+                    cpu_usage = cpu_used / cpu_cores  # 使用率范围 0~1
                     
                     memory_size = round(random.uniform(4.0, 64.0), 2)
                     memory_used = round(random.uniform(1.0, memory_size * 0.8), 2)
-                    memory_usage = round((memory_used / memory_size) * 100, 2) if memory_size > 0 else 0
+                    memory_usage = memory_used / memory_size
                     
                     task = {
                         "taskID": f"task-{stack_idx}-{service_idx}-{task_idx+1}",
