@@ -73,7 +73,10 @@ public:
      * @return 成功更新的板卡数量
      * @note 更新逻辑：
      *       - 如果板卡不在位(false)：无论当前状态如何，都更新为Offline
-     *       - 如果板卡在位(true)：若当前状态是Offline则更新为Abnormal，否则不更新
+     *       - 如果板卡在位(true)：
+     *         * 槽位6和7：若当前状态是Offline则更新为Normal
+     *         * 其他槽位：若当前状态是Offline则更新为Abnormal
+     *         * 否则不更新
      *       - 如果某个槽位号不在映射中，该板卡不会被更新
      */
     virtual size_t UpdateAllBoardsStatus(int chassisNumber, 

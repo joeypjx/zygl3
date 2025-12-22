@@ -216,9 +216,15 @@ public:
                     shouldUpdate = true;
                 }
             } else {
-                // 板卡在位：若当前状态是Offline则更新为Abnormal，否则不更新
+                // 板卡在位：若当前状态是Offline则根据槽位号决定更新状态
                 if (currentStatus == app::domain::BoardOperationalStatus::Offline) {
-                    newStatus = app::domain::BoardOperationalStatus::Abnormal;
+                    // 槽位6和7：离线 -> 正常
+                    // 其他槽位：离线 -> 异常
+                    if (slotNumber == 6 || slotNumber == 7) {
+                        newStatus = app::domain::BoardOperationalStatus::Normal;
+                    } else {
+                        newStatus = app::domain::BoardOperationalStatus::Abnormal;
+                    }
                     shouldUpdate = true;
                 }
             }

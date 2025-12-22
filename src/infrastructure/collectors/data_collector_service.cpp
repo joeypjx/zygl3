@@ -241,12 +241,19 @@ void DataCollectorService::CheckAndMarkAbnormalBoards(int timeoutSeconds) {
         int chassisNumber = chassis->GetChassisNumber();
         
         for (auto& board : boards) {
+            // 获取槽位号
+            int slotNumber = board.GetBoardNumber();
+            
+            // 跳过槽位6和7的板卡超时检查
+            if (slotNumber == 6 || slotNumber == 7) {
+                continue;
+            }
+            
             // 检查板卡是否超时，如果超时且状态是Normal则标记为Abnormal
             if (board.CheckAndMarkAbnormalIfNeeded(timeoutSeconds)) {
                 abnormalCount++;
                 
                 // 保存更新后的板卡到仓储
-                int slotNumber = board.GetBoardNumber();
                 if (slotNumber > 0) {
                     m_chassisRepo->UpdateBoard(chassisNumber, slotNumber, board);
                 }
