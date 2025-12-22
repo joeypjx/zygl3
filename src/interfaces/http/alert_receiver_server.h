@@ -27,37 +27,33 @@ struct BoardAlertRequest {
     int boardNumber;
     int boardType;
     std::string boardAddress;
-    int boardStatus;  // 0-正常, 1-异常
-    std::vector<std::string> alertMessages;
+    int boardStatus;  // 0-正常, 1-异常, 2-不在位
+    std::string alertMsg;  // 板卡告警信息（新版为字符串，不是数组）
 };
 
 /**
- * @brief 组件异常上报请求中的任务告警信息
- */
-struct TaskAlertInfo {
-    std::string taskID;
-    int taskStatus;  // 1-运行中，2-已完成，3-异常，0-其他
-    std::string chassisName;
-    int chassisNumber;
-    std::string boardName;
-    int boardNumber;
-    int boardType;
-    std::string boardAddress;
-    int boardStatus;  // 0-正常, 1-异常
-    std::vector<std::string> alertMessages;
-    
-    TaskAlertInfo() : taskStatus(0), chassisNumber(0), boardNumber(0), boardType(0), boardStatus(0) {}
-};
-
-/**
- * @brief 组件异常上报请求结构
+ * @brief 组件异常上报请求结构（新版为扁平化结构）
  */
 struct ServiceAlertRequest {
-    std::string stackName;
-    std::string stackUUID;
-    std::string serviceName;
-    std::string serviceUUID;
-    std::vector<TaskAlertInfo> taskAlertInfos;
+    std::string stackName;      // 业务链路名称
+    std::string stackUUID;      // 业务链路UUID
+    std::string serviceName;    // 算法组件名称
+    std::string serviceUUID;    // 算法组件UUID
+    std::string taskID;         // 任务id
+    std::string serviceId;      // 算法组件id
+    std::string taskStatus;     // 算法组件副本状态（字符串类型）
+    int replicaNumber;          // 算法组件副本编号
+    std::string chassisName;    // 机箱名称
+    int chassisNumber;          // 机箱号
+    std::string boardName;      // 板卡名称
+    int boardNumber;            // 板卡槽位号
+    int boardType;              // 板卡类型
+    std::string boardAddress;   // 板卡ip地址
+    int boardStatus;            // 板卡状态，0-正常，1-异常，2-不在位
+    std::string alertMsg;       // 组件副本告警信息（字符串）
+    
+    ServiceAlertRequest() : chassisNumber(0), boardNumber(0), boardType(0), 
+                          boardStatus(0), replicaNumber(0) {}
 };
 
 /**
@@ -71,7 +67,6 @@ public:
         std::shared_ptr<app::domain::IStackRepository> stackRepo,
         std::shared_ptr<ResourceMonitorBroadcaster> broadcaster,
         std::shared_ptr<app::infrastructure::QywApiClient> apiClient,
-        const std::string& clientIp,
         std::shared_ptr<app::infrastructure::HeartbeatService> heartbeatService = nullptr,  // 可选：心跳服务（用于角色检查）
         int port = 8888,
         const std::string& host = "0.0.0.0",
@@ -137,7 +132,6 @@ private:
     std::shared_ptr<ResourceMonitorBroadcaster> m_broadcaster;
     std::shared_ptr<app::infrastructure::QywApiClient> m_apiClient;
     std::shared_ptr<app::infrastructure::HeartbeatService> m_heartbeatService;  // 心跳服务（用于角色检查）
-    std::string m_clientIp;
     int m_port;
     std::string m_host;
     int m_heartbeatInterval;

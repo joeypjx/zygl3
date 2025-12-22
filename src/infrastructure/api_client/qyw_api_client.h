@@ -44,19 +44,17 @@ struct BoardInfoResponse {
     int boardType;
     std::string boardAddress;
     int boardStatus;  // 0-正常, 1-异常, 2-不在位
-    float voltage;    // 电压
-    float current;   // 电流
+    float voltage12V;    // 板卡12V电压
+    float voltage33V;    // 板卡3.3V电压
+    float current12A;   // 板卡12A电流
+    float current33A;   // 板卡3.3A电流
     float temperature; // 温度
     std::vector<FanSpeed> fanSpeeds;  // 风扇信息
     std::vector<TaskInfo> taskInfos;  // 任务信息
     
     BoardInfoResponse() : chassisNumber(0), boardNumber(0), boardType(0), 
-                         boardStatus(2), voltage(0.0f), current(0.0f), temperature(0.0f) {}
-};
-
-struct LabelInfo {
-    std::string stackLabelName;
-    std::string stackLabelUUID;
+                         boardStatus(2), voltage12V(0.0f), voltage33V(0.0f), 
+                         current12A(0.0f), current33A(0.0f), temperature(0.0f) {}
 };
 
 struct ServiceTaskInfo {
@@ -69,7 +67,9 @@ struct ServiceTaskInfo {
     float memoryUsed;
     float memoryUsage;
     float netReceive;
+    std::string netReceiveUnit;  // 网络接收流量单位
     float netSent;
+    std::string netSentUnit;  // 网络发送流量单位
     float gpuMemUsed;
     std::string chassisName;
     int chassisNumber;
@@ -93,9 +93,9 @@ struct ServiceInfo {
 struct StackInfoResponse {
     std::string stackName;
     std::string stackUUID;
-    std::vector<LabelInfo> stackLabelInfos;
+    std::vector<std::string> stackLabelInfos;  // 业务链路标签信息（字符串数组）
     int stackDeployStatus;   // 0-未部署, 1-已部署
-    int stackRunningStatus;  // 1-正常运行, 2-异常运行
+    int stackRunningStatus;  // 1-正常运行, 2-异常运行, 3-启用中
     std::vector<ServiceInfo> serviceInfos;
     
     StackInfoResponse() : stackDeployStatus(0), stackRunningStatus(0) {}
@@ -169,10 +169,11 @@ public:
 
     /**
      * @brief 发送IP心跳检测
-     * @param clientIp 接口调用者的IP地址
+     * @param ip 客户端IP地址
+     * @param port 客户端端口号
      * @return 是否发送成功
      */
-    bool SendHeartbeat(const std::string& clientIp);
+    bool SendHeartbeat(const std::string& ip, const std::string& port);
 
     /**
      * @brief 业务链路复位接口（停止当前所有业务链路）
@@ -190,7 +191,7 @@ private:
     std::string m_stackinfoEndpoint = "/api/v1/external/qyw/stackinfo";
     std::string m_deployEndpoint = "/api/v1/stacks/labels/deploy";
     std::string m_undeployEndpoint = "/api/v1/stacks/labels/undeploy";
-    std::string m_heartbeatEndpoint = "/api/v1/sys-config/client/up";
+    std::string m_heartbeatEndpoint = "/api/v1/external/qyw/config";
     std::string m_resetEndpoint = "/api/v1/stacks/labels/reset";
 
     /**

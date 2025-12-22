@@ -137,7 +137,8 @@
      // 使用UpdateFromApiData初始化板卡状态为正常
      std::vector<app::domain::FanSpeed> fanSpeeds;
      std::vector<TaskStatusInfo> tasks;
-     board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, tasks);
+     board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, tasks);
      
      // 将板卡添加到机箱
      auto* boardPtr = testChassis->GetBoardBySlot(1);
@@ -154,9 +155,9 @@
      ASSERT_EQ(BoardOperationalStatus::Normal, initialBoard->GetStatus()) 
          << "初始状态应该是Normal";
      
-     // 创建告警接收服务器
-     alertServer = std::make_shared<AlertReceiverServer>(
-         chassisRepo, stackRepo, broadcaster, apiClient, "127.0.0.1", nullptr, 8889);
+    // 创建告警接收服务器（新版构造函数：移除了clientIp参数）
+    alertServer = std::make_shared<AlertReceiverServer>(
+        chassisRepo, stackRepo, broadcaster, apiClient, nullptr, 8889, "127.0.0.1");
      
      // 启动服务器
      alertServer->Start();
@@ -167,23 +168,23 @@
      // 创建HTTP客户端并发送有效的板卡异常上报请求
      httplib::Client client("127.0.0.1", 8889);
      
-     // 构建有效的JSON请求
-     nlohmann::json requestJson;
-     requestJson["chassisName"] = "TestChassis_1";
-     requestJson["chassisNumber"] = 1;
-     requestJson["boardName"] = "Board_1";
-     requestJson["boardNumber"] = 1;
-     requestJson["boardType"] = 0;
-     requestJson["boardAddress"] = "192.168.0.101";
-     requestJson["boardStatus"] = 1; // 异常
-     requestJson["alertMessages"] = nlohmann::json::array();
-     requestJson["alertMessages"].push_back("板卡温度过高");
-     requestJson["alertMessages"].push_back("板卡电压异常");
-     
-     // 发送POST请求
-     auto res = client.Post("/api/v1/alert/board", 
-                           requestJson.dump(), 
-                           "application/json");
+    // 构建有效的JSON请求（新版为数组格式）
+    nlohmann::json requestArray = nlohmann::json::array();
+    nlohmann::json requestItem;
+    requestItem["chassisName"] = "TestChassis_1";
+    requestItem["chassisNumber"] = 1;
+    requestItem["boardName"] = "Board_1";
+    requestItem["boardNumber"] = 1;
+    requestItem["boardType"] = 0;
+    requestItem["boardAddress"] = "192.168.0.101";
+    requestItem["boardStatus"] = 1; // 异常，0-正常，1-异常，2-不在位
+    requestItem["alertMsg"] = "板卡温度过高";  // 新版为单个字符串，不再是数组
+    requestArray.push_back(requestItem);
+    
+    // 发送POST请求
+    auto res = client.Post("/api/v1/alert/board", 
+                          requestArray.dump(), 
+                          "application/json");
      
      // 等待一小段时间让请求处理完成
      std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -479,14 +480,16 @@ TEST_F(Integration2Test, TC_SendTaskQueryResponse_Success) {
     Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     
     // 添加任务到板卡
     TaskStatusInfo taskInfo;
     taskInfo.taskID = "task-1";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
@@ -659,7 +662,8 @@ TEST_F(Integration2Test, TC_Stack_SaveSuccess) {
     taskInfo.taskID = "task-from-stack";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
@@ -708,7 +712,8 @@ TEST_F(Integration2Test, TC_ResourceController_resetBoard_Integration) {
     Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
     
@@ -751,7 +756,8 @@ TEST_F(Integration2Test, TC_ResourceController_SelfcheckBoard_Integration) {
     Board board("192.168.0.101", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
-    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.101", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);
     
@@ -904,7 +910,8 @@ TEST_F(Integration2Test, TC_InMemoryChassisRepository_Save_Integration) {
     Board board("192.168.0.102", 1, BoardType::CPUGeneralComputingA);
     std::vector<TaskStatusInfo> taskInfos;
     std::vector<app::domain::FanSpeed> fanSpeeds;
-    board.UpdateFromApiData("Board_1", "192.168.0.102", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.102", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     chassis->UpdateBoardBySlot(1, board);
     
     // 验证初始状态
@@ -984,7 +991,8 @@ TEST_F(Integration2Test, TC_InMemoryStackRepository_Save_Integration) {
     taskInfo.taskID = "task-2";
     taskInfo.taskStatus = 1; // 运行中
     taskInfos.push_back(taskInfo);
-    board.UpdateFromApiData("Board_1", "192.168.0.103", BoardType::CPUGeneralComputingA, 0, 12.5f, 2.0f, 45.0f, fanSpeeds, taskInfos);
+    board.UpdateFromApiData("Board_1", "192.168.0.103", BoardType::CPUGeneralComputingA, 0, 
+                            12.5f, 3.3f, 2.0f, 1.0f, 45.0f, fanSpeeds, taskInfos);
     
     chassis->UpdateBoardBySlot(1, board);
     chassisRepo->Save(chassis);

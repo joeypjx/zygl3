@@ -65,6 +65,8 @@ def generate_mock_stack_data(stack_labels=None):
         # 一个标签可以对应多个stack（每个标签生成2-4个stacks）
         stack_counter = 1
         for label_idx, label_name in enumerate(stack_labels, 1):
+            # 为每个标签生成UUID（使用标签名称生成，便于匹配）
+            label_uuid = f"label-uuid-{label_name}-{label_idx}"
             # 为每个标签生成多个stacks（2-4个）
             stacks_per_label = random.randint(2, 4)
             for stack_in_label_idx in range(1, stacks_per_label + 1):
@@ -72,13 +74,10 @@ def generate_mock_stack_data(stack_labels=None):
                     "stackName": f"Stack_{stack_counter}",
                     "stackUUID": f"stack-uuid-{stack_counter}",
                     "stackLabelInfos": [
-                        {
-                            "stackLabelName": label_name,  # 使用传入的标签名称
-                            "stackLabelUUID": f"label-uuid-{label_idx}"  # 同一标签的所有stacks共享同一个UUID
-                        }
+                        label_uuid  # 新版为字符串数组，直接存储标签UUID
                     ],
                     "stackDeployStatus": 0,  # 初始状态为未部署
-                    "stackRunningStatus": 1,  # 固定为正常运行（1）
+                    "stackRunningStatus": 1,  # 固定为正常运行（1），1-正常运行；2-异常运行；3-启用中
                     "serviceInfos": []
                 }
                 stacks.append(stack)
@@ -90,14 +89,11 @@ def generate_mock_stack_data(stack_labels=None):
                 "stackName": f"Stack_{stack_idx}",
                 "stackUUID": f"stack-uuid-{stack_idx}",
                 "stackLabelInfos": [
-                    {
-                        "stackLabelName": f"Label_{stack_idx}_{label_idx}",
-                        "stackLabelUUID": f"label-uuid-{stack_idx}-{label_idx}"
-                    }
+                    f"label-uuid-{stack_idx}-{label_idx}"  # 新版为字符串数组，直接存储标签UUID
                     for label_idx in range(1, random.randint(2, 4))  # 1-3个标签
                 ],
                 "stackDeployStatus": random.choice([0, 1]),  # 0-未部署；1-已部署
-                "stackRunningStatus": 1,  # 固定为正常运行（1）
+                "stackRunningStatus": random.choice([1, 2, 3]),  # 1-正常运行；2-异常运行；3-启用中
                 "serviceInfos": []
             }
             stacks.append(stack)
@@ -134,15 +130,17 @@ def generate_mock_stack_data(stack_labels=None):
                     
                     task = {
                         "taskID": f"task-{stack_idx}-{service_idx}-{task_idx+1}",
-                        "taskStatus": 1,  # 固定为运行中（1）
+                        "taskStatus": 1,  # 固定为运行中（1），1-运行中；2-已完成；3-异常；0-其他
                         "cpuCores": cpu_cores,
                         "cpuUsed": cpu_used,
                         "cpuUsage": cpu_usage,
                         "memorySize": memory_size,
                         "memoryUsed": memory_used,
                         "memoryUsage": memory_usage,
-                        "netReceive": round(random.uniform(0.0, 1000.0), 2),  # MB/s
-                        "netSent": round(random.uniform(0.0, 1000.0), 2),  # MB/s
+                        "netReceive": round(random.uniform(0.0, 1000.0), 2),  # 网络接收流量
+                        "netReceiveUnit": "MB/s",  # 网络接收流量单位
+                        "netSent": round(random.uniform(0.0, 1000.0), 2),  # 网络发送流量
+                        "netSentUnit": "MB/s",  # 网络发送流量单位
                         "gpuMemUsed": round(random.uniform(0.0, 24.0), 2) if random.random() > 0.5 else 0.0,  # GB
                         "chassisName": f"Chassis_{chassis_num}",
                         "chassisNumber": chassis_num,
@@ -211,9 +209,11 @@ def generate_mock_board_data_from_stacks(stacks):
                 "boardNumber": board_num,
                 "boardType": board_type,
                 "boardAddress": generate_board_ip_address(chassis_num, board_num),
-                "boardStatus": 0,  # 固定为正常（0）
-                "voltage": round(random.uniform(11.5, 13.5), 2),
-                "current": round(random.uniform(1.5, 3.0), 2),
+                "boardStatus": 0,  # 固定为正常（0），0-正常，1-异常，2-不在位
+                "voltage12V": round(random.uniform(11.5, 13.5), 2),  # 板卡12V电压
+                "voltage33V": round(random.uniform(3.0, 3.6), 2),   # 板卡3.3V电压
+                "current12A": round(random.uniform(1.5, 3.0), 2),   # 板卡12A电流
+                "current33A": round(random.uniform(0.5, 1.5), 2),  # 板卡3.3A电流
                 "temperature": round(random.uniform(35.0, 55.0), 2),
                 "fanSpeeds": [
                     {
@@ -311,9 +311,11 @@ def generate_mock_board_data():
                     "boardNumber": board_num,
                     "boardType": board_type,
                     "boardAddress": generate_board_ip_address(chassis_num, board_num),
-                    "boardStatus": 0,  # 固定为正常（0）
-                    "voltage": round(random.uniform(11.5, 13.5), 2),
-                    "current": round(random.uniform(1.5, 3.0), 2),
+                    "boardStatus": 0,  # 固定为正常（0），0-正常，1-异常，2-不在位
+                    "voltage12V": round(random.uniform(11.5, 13.5), 2),  # 板卡12V电压
+                    "voltage33V": round(random.uniform(3.0, 3.6), 2),   # 板卡3.3V电压
+                    "current12A": round(random.uniform(1.5, 3.0), 2),   # 板卡12A电流
+                    "current33A": round(random.uniform(0.5, 1.5), 2),  # 板卡3.3A电流
                     "temperature": round(random.uniform(35.0, 55.0), 2),
                     "fanSpeeds": [
                         {
@@ -350,6 +352,8 @@ class APIHandler(BaseHTTPRequestHandler):
         
         if parsed_path.path == '/api/v1/external/qyw/boardinfo':
             self.handle_board_info()
+        elif parsed_path.path == '/api/v1/external/qyw/config':
+            self.handle_heartbeat_config()
         elif parsed_path.path == '/health':
             self.handle_health()
         else:
@@ -474,11 +478,14 @@ class APIHandler(BaseHTTPRequestHandler):
             
             for label_name in stack_labels:
                 found_any = False
+                # 生成对应的标签UUID（与生成时保持一致）
+                expected_label_uuid = f"label-uuid-{label_name}-"
                 # 遍历所有stacks，找到所有包含该标签的stacks
                 for stack in stacks:
-                    # 检查业务链路是否包含该标签名称
-                    for label_info in stack.get("stackLabelInfos", []):
-                        if label_info.get("stackLabelName") == label_name:
+                    # 检查业务链路是否包含该标签UUID（新版为字符串数组）
+                    for label_uuid in stack.get("stackLabelInfos", []):
+                        # 匹配标签UUID（UUID格式：label-uuid-{label_name}-{label_idx}）
+                        if isinstance(label_uuid, str) and label_uuid.startswith(expected_label_uuid):
                             found_any = True
                             # 部署成功：更新部署状态
                             stack["stackDeployStatus"] = 1
@@ -586,11 +593,14 @@ class APIHandler(BaseHTTPRequestHandler):
             
             for label_name in stack_labels:
                 found_any = False
+                # 生成对应的标签UUID（与生成时保持一致）
+                expected_label_uuid = f"label-uuid-{label_name}-"
                 # 遍历所有stacks，找到所有包含该标签的stacks
                 for stack in stacks:
-                    # 检查业务链路是否包含该标签名称
-                    for label_info in stack.get("stackLabelInfos", []):
-                        if label_info.get("stackLabelName") == label_name:
+                    # 检查业务链路是否包含该标签UUID（新版为字符串数组）
+                    for label_uuid in stack.get("stackLabelInfos", []):
+                        # 匹配标签UUID（UUID格式：label-uuid-{label_name}-{label_idx}）
+                        if isinstance(label_uuid, str) and label_uuid.startswith(expected_label_uuid):
                             found_any = True
                             # 停用成功：标记为移除
                             if stack["stackUUID"] not in stacks_to_remove:
@@ -669,6 +679,53 @@ class APIHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
     
+    def handle_heartbeat_config(self):
+        """处理IP心跳检测请求（新版接口）"""
+        try:
+            parsed_path = urlparse(self.path)
+            query_params = dict(param.split('=') for param in parsed_path.query.split('&') if '=' in param)
+            
+            ip = query_params.get('ip', '')
+            port = query_params.get('port', '')
+            
+            if not ip or not port:
+                error_response = {
+                    "code": -1,
+                    "message": "缺少必要参数：ip 和 port",
+                    "data": ""
+                }
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
+                return
+            
+            # 心跳检测成功
+            response = {
+                "code": 0,
+                "message": "success",
+                "data": "success"
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            
+            print(f"[INFO] IP心跳检测: ip={ip}, port={port}")
+        
+        except Exception as e:
+            error_response = {
+                "code": -1,
+                "message": f"处理心跳检测失败: {str(e)}",
+                "data": ""
+            }
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
+    
     def handle_health(self):
         """处理健康检查请求"""
         response = {"status": "ok"}
@@ -706,6 +763,7 @@ def run_server(port=8080):
     print(f"POST 接口: http://localhost:{port}/api/v1/external/qyw/stackinfo")
     print(f"POST 接口: http://localhost:{port}/api/v1/stacks/labels/deploy")
     print(f"POST 接口: http://localhost:{port}/api/v1/stacks/labels/undeploy")
+    print(f"GET  接口: http://localhost:{port}/api/v1/external/qyw/config?ip=xxx&port=xxx")
     print(f"健康检查: http://localhost:{port}/health")
     print("按 Ctrl+C 停止服务器")
     print("=" * 60)

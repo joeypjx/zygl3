@@ -128,8 +128,9 @@ DeployResponse QywApiClient::UndeployStacks(const std::vector<std::string>& labe
     return result;
 }
 
-bool QywApiClient::SendHeartbeat(const std::string& clientIp) {
-    std::string path = m_heartbeatEndpoint + "?clientIp=" + clientIp;
+bool QywApiClient::SendHeartbeat(const std::string& ip, const std::string& port) {
+    // 新版接口：/api/v1/external/qyw/config?ip=xxx&port=xxx
+    std::string path = m_heartbeatEndpoint + "?ip=" + ip + "&port=" + port;
     
     auto res = m_client.Get(path.c_str());
     
@@ -139,7 +140,7 @@ bool QywApiClient::SendHeartbeat(const std::string& clientIp) {
             
             // 解析标准响应格式：{ "code": 0, "message": "success", "data": "success" }
             if (j.contains("code") && j["code"] == 0) {
-                spdlog::info("IP心跳检测发送成功，clientIp: {}", clientIp);
+                spdlog::info("IP心跳检测发送成功，ip: {}, port: {}", ip, port);
                 return true;
             } else {
                 spdlog::error("IP心跳检测响应异常，code: {}, message: {}", 
@@ -200,8 +201,10 @@ std::vector<BoardInfoResponse> QywApiClient::ParseBoardInfoResponse(const std::s
                 boardInfo.boardType = boardJson.value("boardType", 0);
                 boardInfo.boardAddress = boardJson.value("boardAddress", "");
                 boardInfo.boardStatus = boardJson.value("boardStatus", 0);
-                boardInfo.voltage = boardJson.value("voltage", 0.0f);
-                boardInfo.current = boardJson.value("current", 0.0f);
+                boardInfo.voltage12V = boardJson.value("voltage12V", 0.0f);
+                boardInfo.voltage33V = boardJson.value("voltage33V", 0.0f);
+                boardInfo.current12A = boardJson.value("current12A", 0.0f);
+                boardInfo.current33A = boardJson.value("current33A", 0.0f);
                 boardInfo.temperature = boardJson.value("temperature", 0.0f);
                 
                 // 解析风扇信息
@@ -255,13 +258,12 @@ std::vector<StackInfoResponse> QywApiClient::ParseStackInfoResponse(const std::s
                 stackInfo.stackName = stackJson.value("stackName", "");
                 stackInfo.stackUUID = stackJson.value("stackUUID", "");
                 
-                // 解析标签信息
+                // 解析标签信息（新版为字符串数组）
                 if (stackJson.contains("stackLabelInfos")) {
-                    for (const auto& labelJson : stackJson["stackLabelInfos"]) {
-                        LabelInfo labelInfo;
-                        labelInfo.stackLabelName = labelJson.value("stackLabelName", "");  // 已修正拼写错误
-                        labelInfo.stackLabelUUID = labelJson.value("stackLabelUUID", "");  // 已修正拼写错误
-                        stackInfo.stackLabelInfos.push_back(labelInfo);
+                    for (const auto& labelStr : stackJson["stackLabelInfos"]) {
+                        if (labelStr.is_string()) {
+                            stackInfo.stackLabelInfos.push_back(labelStr.get<std::string>());
+                        }
                     }
                 }
 
@@ -290,7 +292,9 @@ std::vector<StackInfoResponse> QywApiClient::ParseStackInfoResponse(const std::s
                                 taskInfo.memoryUsed = taskJson.value("memoryUsed", 0.0f);
                                 taskInfo.memoryUsage = taskJson.value("memoryUsage", 0.0f);
                                 taskInfo.netReceive = taskJson.value("netReceive", 0.0f);
+                                taskInfo.netReceiveUnit = taskJson.value("netReceiveUnit", "");
                                 taskInfo.netSent = taskJson.value("netSent", 0.0f);
+                                taskInfo.netSentUnit = taskJson.value("netSentUnit", "");
                                 taskInfo.gpuMemUsed = taskJson.value("gpuMemUsed", 0.0f);
                                 taskInfo.chassisName = taskJson.value("chassisName", "");
                                 taskInfo.chassisNumber = taskJson.value("chassisNumber", 0);

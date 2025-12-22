@@ -8,16 +8,13 @@
       "stackinfo": "/api/v1/external/qyw/stackinfo",
       "deploy": "/api/v1/stacks/labels/deploy",
       "undeploy": "/api/v1/stacks/labels/undeploy",
-      "heartbeat": "/api/v1/sys-config/client/up",
+      "heartbeat": "/api/v1/external/qyw/config",
       "reset": "/api/v1/stacks/labels/reset"
     },
     "timeout": 30,
     "retry_count": 3,
     "account": "admin",
     "password": "12q12w12ee"
-  },
-  "heartbeat": {
-    "client_ip": "192.168.6.222:8888"
   },
   "alert_server": {
     "port": 8888,

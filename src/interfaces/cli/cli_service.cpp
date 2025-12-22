@@ -604,7 +604,7 @@ void CliService::PrintStackDetail(const std::string& stackUUID) {
     if (!labels.empty()) {
         std::cout << "\n标签信息:" << std::endl;
         for (const auto& label : labels) {
-            std::cout << "  - " << label.stackLabelName << " (UUID: " << label.stackLabelUUID << ")" << std::endl;
+            std::cout << "  - " << label << std::endl;
         }
     }
     
@@ -739,6 +739,8 @@ void CliService::PrintAllStacksFullInfo() {
             running_status = "正常运行";
         } else if (stack->GetRunningStatus() == 2) {
             running_status = "异常运行";
+        } else if (stack->GetRunningStatus() == 3) {
+            running_status = "启用中";
         } else {
             running_status = "未运行";
         }
@@ -749,7 +751,7 @@ void CliService::PrintAllStacksFullInfo() {
         if (!labels.empty()) {
             for (size_t i = 0; i < labels.size(); ++i) {
                 if (i > 0) labels_str += ", ";
-                labels_str += labels[i].stackLabelName;
+                labels_str += labels[i];
             }
         } else {
             labels_str = "-";

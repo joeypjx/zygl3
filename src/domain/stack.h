@@ -10,14 +10,6 @@
 namespace app::domain {
 
 /**
- * @brief 业务链路标签信息
- */
-struct StackLabelInfo {
-    std::string stackLabelName;   // 业务链路标签名称
-    std::string stackLabelUUID;  // 业务链路标签UUID
-};
-
-/**
  * @brief 业务链路聚合根
  * @detail 业务链路包含多个组件，每个组件包含多个任务
  */
@@ -37,7 +29,7 @@ public:
     const std::string& GetStackName() const { return m_stackName; }
     int GetDeployStatus() const { return m_stackDeployStatus; }
     int GetRunningStatus() const { return m_stackRunningStatus; }
-    const std::vector<StackLabelInfo>& GetLabels() const { return m_stackLabels; }
+    const std::vector<std::string>& GetLabels() const { return m_stackLabels; }
 
     /**
      * @brief 添加或更新组件
@@ -97,7 +89,7 @@ public:
     /**
      * @brief 设置标签信息
      */
-    void SetLabels(const std::vector<StackLabelInfo>& labels) {
+    void SetLabels(const std::vector<std::string>& labels) {
         m_stackLabels = labels;
     }
 
@@ -105,9 +97,9 @@ private:
     std::string m_stackUUID;                      // 业务链路UUID
     std::string m_stackName;                      // 业务链路名称
     int m_stackDeployStatus = 0;                   // 部署状态：0-未部署；1-已部署
-    int m_stackRunningStatus = 0;                  // 运行状态：1-正常运行；2-异常运行
+    int m_stackRunningStatus = 0;                  // 运行状态：1-正常运行；2-异常运行；3-启用中
 
-    std::vector<StackLabelInfo> m_stackLabels;    // 业务链路标签信息
+    std::vector<std::string> m_stackLabels;       // 业务链路标签信息（字符串数组，标签UUID）
     std::map<std::string, Service> m_services;    // 组件列表，K: serviceUUID, V: Service
 };
 

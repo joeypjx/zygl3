@@ -120,8 +120,10 @@ void DataCollectorService::CollectBoardInfo() {
                                         apiBoardInfo.boardAddress,
                                         static_cast<app::domain::BoardType>(apiBoardInfo.boardType),
                                         apiBoardInfo.boardStatus,
-                                        apiBoardInfo.voltage,
-                                        apiBoardInfo.current,
+                                        apiBoardInfo.voltage12V,
+                                        apiBoardInfo.voltage33V,
+                                        apiBoardInfo.current12A,
+                                        apiBoardInfo.current33A,
                                         apiBoardInfo.temperature,
                                         fanSpeeds,
                                         taskInfos);
@@ -176,16 +178,9 @@ void DataCollectorService::CollectStackInfo() {
             apiStackInfo.stackName
         );
         
-        // 设置标签信息
-        std::vector<app::domain::StackLabelInfo> labels;
-        for (const auto& apiLabel : apiStackInfo.stackLabelInfos) {
-            app::domain::StackLabelInfo label;
-            label.stackLabelUUID = apiLabel.stackLabelUUID;
-            label.stackLabelName = apiLabel.stackLabelName;
-            labels.push_back(label);
-        }
-        if (!labels.empty()) {
-            stack->SetLabels(labels);
+        // 设置标签信息（新版API返回字符串数组，字符串为标签UUID）
+        if (!apiStackInfo.stackLabelInfos.empty()) {
+            stack->SetLabels(apiStackInfo.stackLabelInfos);
         }
         
         // 更新部署状态和运行状态

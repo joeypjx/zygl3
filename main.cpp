@@ -120,10 +120,9 @@ int main() {
     spdlog::info("创建HTTP告警接收服务器...");
     int httpAlertPort = ConfigManager::GetInt("/alert_server/port", 8888);
     std::string httpAlertHost = ConfigManager::GetString("/alert_server/host", "0.0.0.0");
-    std::string clientIp = ConfigManager::GetString("/heartbeat/client_ip", "192.168.6.222");
     int heartbeatInterval = ConfigManager::GetInt("/collector/interval_seconds", 10);  // 使用采集间隔作为心跳间隔
     auto alertServer = std::make_shared<AlertReceiverServer>(
-        chassisRepo, stackRepo, broadcaster, apiClient, clientIp, heartbeatService,
+        chassisRepo, stackRepo, broadcaster, apiClient, heartbeatService,
         httpAlertPort, httpAlertHost, heartbeatInterval);
     alertServer->Start();
     

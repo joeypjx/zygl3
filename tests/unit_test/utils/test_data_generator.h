@@ -54,9 +54,11 @@ public:
         }
         info.boardType = (boardNum == 6 || boardNum == 7) ? 1 : 
                         (boardNum == 13 || boardNum == 14) ? 2 : 0;
-        info.boardStatus = 0; // 正常
-        info.voltage = 12.5f;
-        info.current = 2.0f;
+        info.boardStatus = 0; // 正常，0-正常，1-异常，2-不在位
+        info.voltage12V = 12.5f;  // 板卡12V电压
+        info.voltage33V = 3.3f;   // 板卡3.3V电压
+        info.current12A = 2.0f;   // 板卡12A电流
+        info.current33A = 1.0f;   // 板卡3.3A电流
         info.temperature = 45.0f;
         
         // 添加风扇信息
@@ -78,13 +80,10 @@ public:
         info.stackUUID = uuid;
         info.stackName = name.empty() ? "Stack_" + uuid.substr(0, 8) : name;
         info.stackDeployStatus = 1; // 已部署
-        info.stackRunningStatus = 1; // 正常运行
+        info.stackRunningStatus = 1; // 正常运行，1-正常运行；2-异常运行；3-启用中
         
-        // 添加标签
-        app::infrastructure::LabelInfo label;
-        label.stackLabelUUID = "label-uuid-1";
-        label.stackLabelName = "label1";
-        info.stackLabelInfos.push_back(label);
+        // 添加标签（新版为字符串数组）
+        info.stackLabelInfos.push_back("label-uuid-1");
         
         // 添加服务
         app::infrastructure::ServiceInfo service;
@@ -104,7 +103,9 @@ public:
         task.memoryUsed = 4096.0f;
         task.memoryUsage = 50.0f;
         task.netReceive = 100.0f;
+        task.netReceiveUnit = "MB/s";  // 网络接收流量单位
         task.netSent = 50.0f;
+        task.netSentUnit = "MB/s";  // 网络发送流量单位
         task.gpuMemUsed = 2048.0f;
         task.chassisNumber = 1;
         task.boardNumber = 1;

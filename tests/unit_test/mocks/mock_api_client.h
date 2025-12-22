@@ -47,9 +47,10 @@ public:
         return m_mockStackInfo;
     }
     
-    bool SendHeartbeat(const std::string& clientIp) {
+    bool SendHeartbeat(const std::string& ip, const std::string& port) {
         m_sendHeartbeatCalled = true;
-        m_lastHeartbeatIp = clientIp;
+        m_lastHeartbeatIp = ip;
+        m_lastHeartbeatPort = port;
         return !m_shouldFail;
     }
     
@@ -119,6 +120,7 @@ public:
     bool ResetStacksCalled() const { return m_resetStacksCalled; }
     
     const std::string& GetLastHeartbeatIp() const { return m_lastHeartbeatIp; }
+    const std::string& GetLastHeartbeatPort() const { return m_lastHeartbeatPort; }
     const std::vector<std::string>& GetLastDeployLabels() const { return m_lastDeployLabels; }
     const std::string& GetLastDeployAccount() const { return m_lastDeployAccount; }
     
@@ -130,6 +132,7 @@ public:
         m_undeployStacksCalled = false;
         m_resetStacksCalled = false;
         m_lastHeartbeatIp.clear();
+        m_lastHeartbeatPort.clear();
         m_lastDeployLabels.clear();
     }
     
@@ -148,6 +151,7 @@ private:
     bool m_resetStacksCalled;
     
     std::string m_lastHeartbeatIp;
+    std::string m_lastHeartbeatPort;
     std::vector<std::string> m_lastDeployLabels;
     std::string m_lastDeployAccount;
     std::string m_lastDeployPassword;
