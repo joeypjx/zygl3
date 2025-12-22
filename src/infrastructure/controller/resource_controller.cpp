@@ -273,6 +273,8 @@ ResourceController::OperationResult ResourceController::parseResponse(
                 char slot_status = response_model->m_slot[slot_num - 1];
                 SlotResult slot_result;
                 slot_result.slot_number = i + 1; // 使用在slot_numbers中的索引
+                // 初始化 status 为默认值，避免未初始化
+                slot_result.status = SlotStatus::REQUEST_OPERATION_OR_FAILED; // 默认为失败
                 
                 if (slot_status == static_cast<char>(SlotStatus::NO_OPERATION_OR_SUCCESS)) {
                     slot_result.status = SlotStatus::NO_OPERATION_OR_SUCCESS;
@@ -280,6 +282,12 @@ ResourceController::OperationResult ResourceController::parseResponse(
                 } else if (slot_status == static_cast<char>(SlotStatus::REQUEST_OPERATION_OR_FAILED)) {
                     slot_result.status = SlotStatus::REQUEST_OPERATION_OR_FAILED;
                     failed_count++;
+                } else {
+                    // 处理异常值：既不是0也不是1，视为失败
+                    slot_result.status = SlotStatus::REQUEST_OPERATION_OR_FAILED;
+                    failed_count++;
+                    spdlog::warn("Unexpected slot status value: {} for slot {}", 
+                                static_cast<int>(slot_status), slot_num);
                 }
                 
                 slot_results.push_back(slot_result);

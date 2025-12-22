@@ -7,6 +7,17 @@ using nlohmann::json;
 
 namespace app::interfaces {
 
+/**
+ * @brief 构造函数
+ * @param chassisRepo 机箱仓储接口
+ * @param stackRepo 业务链路仓储接口
+ * @param broadcaster UDP广播器（用于发送故障上报）
+ * @param apiClient API客户端（用于发送心跳）
+ * @param heartbeatService 心跳服务（可选，用于主备角色检查）
+ * @param port HTTP服务器监听端口
+ * @param host HTTP服务器监听地址（"0.0.0.0"表示监听所有接口）
+ * @param heartbeatInterval 心跳发送间隔（秒）
+ */
 AlertReceiverServer::AlertReceiverServer(
     std::shared_ptr<app::domain::IChassisRepository> chassisRepo,
     std::shared_ptr<app::domain::IStackRepository> stackRepo,
@@ -31,6 +42,10 @@ AlertReceiverServer::~AlertReceiverServer() {
     Stop();
 }
 
+/**
+ * @brief 启动HTTP告警接收服务器
+ * @note 启动两个线程：HTTP服务器线程和心跳发送线程
+ */
 void AlertReceiverServer::Start() {
     if (m_running) {
         spdlog::info("告警接收服务器已在运行");
@@ -54,6 +69,10 @@ void AlertReceiverServer::Start() {
     spdlog::info("告警接收服务器已启动，监听端口: {}", m_port);
 }
 
+/**
+ * @brief 停止HTTP告警接收服务器
+ * @note 停止HTTP服务器和心跳线程，等待线程结束
+ */
 void AlertReceiverServer::Stop() {
     if (!m_running) {
         return;
@@ -61,23 +80,36 @@ void AlertReceiverServer::Stop() {
     
     m_running = false;
     m_server.stop();
+    
+    // 等待HTTP服务器线程结束
     if (m_serverThread.joinable()) {
         m_serverThread.join();
     }
+    
+    // 等待心跳线程结束
     if (m_heartbeatThread.joinable()) {
         m_heartbeatThread.join();
     }
     spdlog::info("告警接收服务器已停止");
 }
 
+/**
+ * @brief HTTP服务器循环（在独立线程中运行）
+ * @note 阻塞调用，直到服务器停止
+ */
 void AlertReceiverServer::ServerLoop() {
     m_server.listen(m_host.c_str(), m_port);
 }
 
+/**
+ * @brief 心跳发送循环（在独立线程中运行）
+ * @note 定期向上游API发送IP心跳，启动后立即发送一次
+ */
 void AlertReceiverServer::HeartbeatLoop() {
     // 启动后立即发送一次心跳
     SendHeartbeat();
     
+    // 按配置的间隔定期发送心跳
     while (m_running) {
         std::this_thread::sleep_for(std::chrono::seconds(m_heartbeatInterval));
         if (m_running) {
@@ -86,6 +118,11 @@ void AlertReceiverServer::HeartbeatLoop() {
     }
 }
 
+/**
+ * @brief 发送IP心跳检测
+ * @note 只有主节点才发送心跳，备节点不发送
+ *       使用alert_server的host和port作为心跳的IP和端口
+ */
 void AlertReceiverServer::SendHeartbeat() {
     // 检查角色：只有主节点才发送心跳
     if (m_heartbeatService) {
@@ -104,6 +141,13 @@ void AlertReceiverServer::SendHeartbeat() {
     m_apiClient->SendHeartbeat(m_host, std::to_string(m_port));
 }
 
+/**
+ * @brief 处理板卡异常上报请求
+ * @param req HTTP请求对象
+ * @param res HTTP响应对象
+ * @note 新版API要求请求体为对象数组格式，支持批量上报
+ *       处理流程：1.解析JSON数组 2.更新板卡状态 3.发送UDP故障上报 4.返回响应
+ */
 void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib::Response& res) {
     try {
         spdlog::info("收到板卡异常上报...");
@@ -111,15 +155,16 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
         // 解析JSON请求（新版为对象数组）
         json j = json::parse(req.body);
         
-        // 检查是否为数组
+        // 检查是否为数组格式（新版API要求）
         if (!j.is_array()) {
             spdlog::error("板卡异常上报请求格式错误：应为数组格式");
             SendErrorResponse(res, "请求格式错误：应为数组格式");
             return;
         }
         
-        // 处理数组中的每个板卡告警
+        // 处理数组中的每个板卡告警（支持批量上报）
         for (const auto& alertJson : j) {
+            // 解析板卡告警信息
             BoardAlertRequest alert;
             alert.chassisName = alertJson.value("chassisName", "");
             alert.chassisNumber = alertJson.value("chassisNumber", 0);
@@ -127,9 +172,10 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
             alert.boardNumber = alertJson.value("boardNumber", 0);
             alert.boardType = alertJson.value("boardType", 0);
             alert.boardAddress = alertJson.value("boardAddress", "");
-            alert.boardStatus = alertJson.value("boardStatus", 0);
-            alert.alertMsg = alertJson.value("alertMsg", "");  // 新版为字符串字段
+            alert.boardStatus = alertJson.value("boardStatus", 0);  // 0-正常, 1-异常, 2-不在位
+            alert.alertMsg = alertJson.value("alertMsg", "");  // 新版为字符串字段（之前是数组）
             
+            // 记录告警信息日志
             spdlog::info("板卡异常信息:");
             spdlog::info("  机箱: {} ({})", alert.chassisNumber, alert.chassisName);
             spdlog::info("  板卡: {} ({})", alert.boardNumber, alert.boardName);
@@ -150,6 +196,7 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
                 faultDesc << " 告警:" << alert.alertMsg;
             }
             
+            // 通过UDP广播器发送故障上报（问题代码0表示板卡故障）
             if (m_broadcaster) {
                 m_broadcaster->SendFaultReport(faultDesc.str(), 0);
             }
@@ -158,9 +205,9 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
             // 根据机箱号和板卡IP地址（或槽位号）找到对应的机箱和板卡
             auto chassis = m_chassisRepo->FindByNumber(alert.chassisNumber);
             if (chassis) {
-                // 优先通过IP地址查找板卡
+                // 优先通过IP地址查找板卡（更准确）
                 auto* board = chassis->GetBoardByAddress(alert.boardAddress);
-                // 如果通过IP地址找不到，尝试通过槽位号查找
+                // 如果通过IP地址找不到，尝试通过槽位号查找（备用方案）
                 if (!board && alert.boardNumber > 0) {
                     board = chassis->GetBoardBySlot(alert.boardNumber);
                 }
@@ -198,13 +245,21 @@ void AlertReceiverServer::HandleBoardAlert(const httplib::Request& req, httplib:
     }
 }
 
+/**
+ * @brief 处理组件异常上报请求
+ * @param req HTTP请求对象
+ * @param res HTTP响应对象
+ * @note 新版API为扁平化结构，直接包含所有字段（不再嵌套在taskAlertInfos中）
+ *       处理流程：1.解析JSON 2.记录日志 3.发送UDP故障上报 4.返回响应
+ */
 void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httplib::Response& res) {
     try {
         spdlog::info("收到组件异常上报...");
         
-        // 解析JSON请求（新版为扁平化结构）
+        // 解析JSON请求（新版为扁平化结构，不再嵌套在taskAlertInfos数组中）
         json j = json::parse(req.body);
         
+        // 解析业务链路和组件信息
         ServiceAlertRequest alert;
         alert.stackName = j.value("stackName", "");
         alert.stackUUID = j.value("stackUUID", "");
@@ -213,7 +268,7 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
         alert.taskID = j.value("taskID", "");
         alert.serviceId = j.value("serviceId", "");
         
-        // taskStatus 在新版文档中为字符串类型
+        // taskStatus 在新版文档中为字符串类型（之前是数字）
         if (j.contains("taskStatus")) {
             if (j["taskStatus"].is_string()) {
                 alert.taskStatus = j["taskStatus"].get<std::string>();
@@ -223,15 +278,18 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
             }
         }
         
+        // 解析任务副本信息
         alert.replicaNumber = j.value("replicaNumber", 0);
+        
+        // 解析运行位置信息
         alert.chassisName = j.value("chassisName", "");
         alert.chassisNumber = j.value("chassisNumber", 0);
         alert.boardName = j.value("boardName", "");
         alert.boardNumber = j.value("boardNumber", 0);
         alert.boardType = j.value("boardType", 0);
         alert.boardAddress = j.value("boardAddress", "");
-        alert.boardStatus = j.value("boardStatus", 0);
-        alert.alertMsg = j.value("alertMsg", "");  // 新版为字符串字段
+        alert.boardStatus = j.value("boardStatus", 0);  // 0-正常, 1-异常, 2-不在位
+        alert.alertMsg = j.value("alertMsg", "");  // 新版为字符串字段（之前是数组）
         
         spdlog::info("组件异常信息:");
         spdlog::info("  业务链路: {} (UUID: {})", alert.stackName, alert.stackUUID);
@@ -257,12 +315,13 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
             faultDesc << " 告警:" << alert.alertMsg;
         }
         
+        // 通过UDP广播器发送故障上报（问题代码1表示组件故障）
         if (m_broadcaster) {
             m_broadcaster->SendFaultReport(faultDesc.str(), 1);
         }
         
         // TODO: 这里可以根据需要更新仓储中的数据或做其他处理
-        // 例如：更新组件状态为异常
+        // 例如：更新组件状态为异常、更新任务状态等
         
         // 发送成功响应
         SendSuccessResponse(res);
@@ -276,6 +335,11 @@ void AlertReceiverServer::HandleServiceAlert(const httplib::Request& req, httpli
     }
 }
 
+/**
+ * @brief 发送成功响应
+ * @param res HTTP响应对象
+ * @note 标准响应格式：{ "code": 0, "message": "success", "data": "success" }
+ */
 void AlertReceiverServer::SendSuccessResponse(httplib::Response& res) {
     json response;
     response["code"] = 0;
@@ -285,6 +349,12 @@ void AlertReceiverServer::SendSuccessResponse(httplib::Response& res) {
     res.set_content(response.dump(), "application/json");
 }
 
+/**
+ * @brief 发送错误响应
+ * @param res HTTP响应对象
+ * @param message 错误消息
+ * @note 标准响应格式：{ "code": -1, "message": "...", "data": "" }
+ */
 void AlertReceiverServer::SendErrorResponse(httplib::Response& res, const std::string& message) {
     json response;
     response["code"] = -1;

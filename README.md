@@ -28,6 +28,26 @@
 - **数据协议**：
   - 板卡状态：9个机箱×12块板卡=108字节
   - 任务状态：9个机箱×12块板卡×8个任务=864字节
+- **支持协议**：资源监控、任务查询、任务启动/停止、机箱复位/自检、BMC查询
+
+### 5. HTTP告警接收服务
+- **告警接收**：接收板卡异常和组件异常上报
+- **心跳检测**：定期向上游API发送IP心跳
+- **主备支持**：仅在主节点模式下发送心跳
+
+### 6. 高可用性（HA）支持
+- **主备切换**：支持双节点主备模式
+- **角色协商**：自动进行主备角色选举
+- **故障检测**：主节点故障时自动切换
+- **优先级配置**：支持通过优先级控制主备选举
+
+### 7. BMC数据接收
+- **组播接收**：接收BMC组播数据
+- **实时更新**：自动更新板卡状态
+
+### 8. CLI命令行服务
+- **交互式命令**：提供命令行交互界面
+- **资源查询**：查询机箱、板卡、业务链路信息
 
 ## 系统架构
 
@@ -83,79 +103,193 @@ cmake ..
 # 编译
 make
 
-# 运行
-./zygl3
+# 运行（使用默认配置文件 config.json）
+./zygl
+
+# 运行（指定配置文件）
+./zygl -c config_full.json
+./zygl --config /path/to/config.json
+
+# 查看帮助
+./zygl -h
+./zygl --help
+```
+
+### 安装部署
+
+系统提供了安装脚本，可以自动编译、安装和配置：
+
+```bash
+# 运行安装脚本
+./install.sh
+
+# 卸载
+./uninstall.sh
 ```
 
 ## 配置说明
 
-### API配置
-在 `main.cpp` 中修改API地址：
+系统支持通过配置文件进行灵活配置，配置文件采用 JSON 格式。
 
-```cpp
-std::string apiBaseUrl = "your-api-server";
-int apiPort = 8080;
+### 配置文件类型
+
+1. **config.json** - 主配置文件（必需）
+   - API 配置（地址、端口、端点路径）
+   - 告警服务器配置
+   - UDP 组播配置
+   - 数据采集配置
+   - HA 配置
+   - 日志配置
+
+2. **config_full.json** - 完整版配置文件（可选）
+   - 包含所有配置项和详细说明
+   - 适用于需要完整配置的场景
+
+3. **chassis_config.json** - 机箱配置文件（可选）
+   - 定义系统中所有机箱和板卡的配置
+   - 如果不存在，系统会使用默认配置或从 config.json 读取
+
+### 配置文件指定方式
+
+系统支持三种方式指定配置文件，优先级从高到低：
+
+1. **命令行参数**（最高优先级）
+   ```bash
+   ./zygl -c config_full.json
+   ./zygl --config /absolute/path/to/config.json
+   ```
+
+2. **环境变量**
+   ```bash
+   export ZYGL_CONFIG=/path/to/config.json
+   ./zygl
+   ```
+
+3. **默认值**
+   - 如果未指定，默认使用 `config.json`
+
+### 配置文件示例
+
+#### 基本配置（config.json）
+```json
+{
+  "api": {
+    "base_url": "localhost",
+    "port": 8080,
+    "endpoints": {
+      "boardinfo": "/api/v1/external/qyw/boardinfo",
+      "stackinfo": "/api/v1/external/qyw/stackinfo"
+    }
+  },
+  "alert_server": {
+    "port": 8888,
+    "host": "0.0.0.0"
+  },
+  "udp": {
+    "port": 4106,
+    "broadcaster": {
+      "multicast_group": "234.186.1.99"
+    },
+    "listener": {
+      "multicast_group": "234.186.1.98"
+    }
+  },
+  "collector": {
+    "interval_seconds": 10,
+    "board_timeout_seconds": 60
+  },
+  "ha": {
+    "enabled": false
+  },
+  "logging": {
+    "log_dir": "./logs",
+    "level": "info"
+  }
+}
 ```
 
-### UDP组播配置
-在 `main.cpp` 中修改组播地址和端口：
-
-```cpp
-auto broadcaster = std::make_shared<ResourceMonitorBroadcaster>(
-    chassisRepo, "234.186.1.99", 0x100A);  // 响应组播
-auto listener = std::make_shared<ResourceMonitorListener>(
-    broadcaster, "234.186.1.98", 0x100A);  // 请求组播
+#### HA 配置（主备模式）
+```json
+{
+  "ha": {
+    "enabled": true,
+    "multicast_group": "224.100.200.16",
+    "heartbeat": {
+      "port": 9999,
+      "interval_seconds": 3,
+      "timeout_seconds": 9
+    },
+    "priority": 0
+  }
+}
 ```
+
+### 机箱配置
+
+机箱配置可以从以下位置加载（按优先级）：
+
+1. **chassis_config.json** - 独立配置文件（最高优先级）
+2. **config.json** - 主配置文件中的 `/topology/chassis` 节点
+3. **硬编码默认配置** - 如果以上都不存在，使用默认配置（9个机箱，每个14块板卡）
+
+### 配置项说明
+
+详细配置项说明请参考：
+- `config_full.json` - 完整配置示例
+- `chassis_config.json` - 机箱配置示例
 
 ## 目录结构
 
 ```
 zygl3/
-├── domain/                           # 领域层
-│   ├── board.h                      # 板卡实体
-│   ├── chassis.h                    # 机箱聚合根
-│   ├── service.h                    # 组件实体
-│   ├── stack.h                      # 业务链路聚合根
-│   ├── task.h                       # 任务实体
-│   ├── value_objects.h              # 值对象
-│   ├── i_chassis_repository.h       # 机箱仓储接口
-│   └── i_stack_repository.h         # 业务链路仓储接口
-├── infrastructure/                    # 基础设施层
-│   ├── persistence/                  # 持久化
-│   │   ├── in_memory_chassis_repository.h
-│   │   └── in_memory_stack_repository.h
-│   ├── config/                       # 配置
-│   │   └── chassis_factory.h        # 机箱工厂
-│   ├── collectors/                   # 采集器
-│   │   ├── data_collector_service.h
-│   │   └── data_collector_service.cpp
-│   └── api_client/                   # API客户端
-│       ├── qyw_api_client.h
-│       ├── qyw_api_client.cpp
-│       ├── httplib.h                # cpp-httplib
-│       └── json.hpp                 # nlohmann/json
-├── interfaces/                        # 接口层
-│   └── udp/
-│       ├── resource_monitor_broadcaster.h
-│       └── resource_monitor_broadcaster.cpp
+├── src/
+│   ├── domain/                       # 领域层
+│   │   ├── board.h                   # 板卡实体
+│   │   ├── chassis.h                 # 机箱聚合根
+│   │   ├── service.h                 # 组件实体
+│   │   ├── stack.h                   # 业务链路聚合根
+│   │   ├── task.h                    # 任务实体
+│   │   ├── value_objects.h           # 值对象
+│   │   ├── i_chassis_repository.h    # 机箱仓储接口
+│   │   └── i_stack_repository.h      # 业务链路仓储接口
+│   ├── infrastructure/               # 基础设施层
+│   │   ├── persistence/              # 持久化
+│   │   ├── config/                   # 配置管理
+│   │   ├── collectors/               # 采集器
+│   │   ├── api_client/               # API客户端
+│   │   ├── ha/                       # 高可用性
+│   │   └── controller/               # 控制器
+│   └── interfaces/                   # 接口层
+│       ├── udp/                      # UDP组播
+│       ├── http/                     # HTTP服务
+│       ├── cli/                      # 命令行接口
+│       └── bmc/                      # BMC接收
+├── third_party/                      # 第三方库
+├── tests/                            # 测试代码
+├── docs/                             # 文档
+├── config.json                       # 主配置文件
+├── config_full.json                  # 完整版配置文件
+├── chassis_config.json               # 机箱配置文件
 ├── main.cpp                          # 主程序
 ├── CMakeLists.txt                    # CMake配置
-├── docs/
-│   ├── UNIT_ARCHITECTURE.md         # 单元架构划分文档
-│   ├── TEST_CASES.md                 # 单元测试用例设计文档
-│   ├── Server_API.txt                # API接口文档
-│   ├── UDP.txt                       # UDP协议文档
-│   └── Dialog.txt                    # 设计讨论文档
+├── install.sh                        # 安装脚本
 └── README.md                         # 本文件
 
 ## 工作流程
 
 ### 1. 系统启动
 ```
-1. 初始化9个机箱（每个14块板卡）
-2. 启动UDP监听器和广播器
-3. 启动数据采集服务
-4. 系统运行，等待UDP请求
+1. 加载配置文件（支持命令行参数、环境变量或默认配置）
+2. 初始化日志系统
+3. 从配置文件或默认配置初始化机箱拓扑（9个机箱，每个14块板卡）
+4. 创建API客户端、数据采集服务
+5. 启动UDP监听器和广播器
+6. 启动HTTP告警接收服务器
+7. 启动BMC接收器
+8. 启动CLI命令行服务
+9. 如果启用HA，启动心跳服务
+10. 启动数据采集服务（后台线程）
+11. 系统运行，等待请求
 ```
 
 ### 2. 数据采集
@@ -182,8 +316,10 @@ zygl3/
 - **架构**：DDD（领域驱动设计）
 - **HTTP客户端**：cpp-httplib
 - **JSON解析**：nlohmann/json
-- **网络**：POSIX Socket（UDP组播）
+- **日志库**：spdlog
+- **网络**：POSIX Socket（UDP组播、TCP HTTP）
 - **构建系统**：CMake
+- **线程**：std::thread（多线程支持）
 
 ## 开发规范
 
@@ -192,6 +328,64 @@ zygl3/
 - 使用智能指针管理内存
 - 线程安全的仓储实现
 - 跨平台支持（macOS, Linux, Windows）
+- 配置文件支持JSON格式
+- 支持命令行参数和环境变量配置
+
+## 快速开始
+
+### 1. 准备配置文件
+
+复制并修改配置文件：
+
+```bash
+cp config_full.json config.json
+# 编辑 config.json，修改API地址等配置
+```
+
+### 2. 配置机箱拓扑（可选）
+
+如果需要自定义机箱配置：
+
+```bash
+# 编辑 chassis_config.json
+# 定义机箱和板卡的IP地址、类型等信息
+```
+
+### 3. 编译和运行
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+./zygl -c ../config.json
+```
+
+### 4. 查看日志
+
+```bash
+# 日志文件位置（默认）
+tail -f logs/zygl.log
+```
+
+## 常见问题
+
+### Q: 如何指定不同的配置文件？
+A: 使用 `-c` 或 `--config` 参数：
+```bash
+./zygl -c /path/to/config.json
+```
+
+### Q: 如果没有 chassis_config.json 会怎样？
+A: 系统会按以下顺序尝试加载：
+1. 从 `chassis_config.json` 加载
+2. 从 `config.json` 的 `/topology/chassis` 节点加载
+3. 使用硬编码默认配置（9个机箱，每个14块板卡）
+
+### Q: 如何启用HA功能？
+A: 在配置文件中设置 `ha.enabled = true`，并配置相关参数。
+
+### Q: 如何查看系统状态？
+A: 系统提供CLI命令行接口，可以通过交互式命令查询资源状态。
 
 ## License
 
