@@ -47,7 +47,7 @@ void DataCollectorService::Stop() {
 void DataCollectorService::CollectLoop() {
     while (m_running) {
         try {
-            spdlog::info("开始采集数据...");
+            spdlog::debug("开始采集数据...");
             
             // 采集板卡信息
             CollectBoardInfo();
@@ -58,7 +58,7 @@ void DataCollectorService::CollectLoop() {
             // 检查板卡超时状态，将超时且状态为Normal的标记为Abnormal
             CheckAndMarkAbnormalBoards(m_boardTimeoutSeconds);
             
-            spdlog::info("数据采集完成，等待 {} 秒...", m_intervalSeconds);
+            spdlog::debug("数据采集完成，等待 {} 秒...", m_intervalSeconds);
             
             // 等待指定时间
             std::this_thread::sleep_for(std::chrono::seconds(m_intervalSeconds));
@@ -71,7 +71,7 @@ void DataCollectorService::CollectLoop() {
 }
 
 void DataCollectorService::CollectBoardInfo() {
-    spdlog::info("  采集板卡信息...");
+    spdlog::debug("  采集板卡信息...");
     
     // 调用API获取板卡信息
     auto boardInfos = m_apiClient->GetBoardInfo();
@@ -81,7 +81,7 @@ void DataCollectorService::CollectBoardInfo() {
         return;
     }
     
-    spdlog::info("  获取到 {} 条板卡信息", boardInfos.size());
+    spdlog::debug("  获取到 {} 条板卡信息", boardInfos.size());
     
     // 将 API 响应转换为领域对象并更新仓储
     for (const auto& apiBoardInfo : boardInfos) {
@@ -141,11 +141,11 @@ void DataCollectorService::CollectBoardInfo() {
         }
     }
     
-    spdlog::info("  板卡信息更新完成");
+    spdlog::debug("  板卡信息更新完成");
 }
 
 void DataCollectorService::CollectStackInfo() {
-    spdlog::info("  采集业务链路信息...");
+    spdlog::debug("  采集业务链路信息...");
     
     // 调用API获取业务链路信息
     bool apiSuccess = false;

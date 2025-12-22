@@ -138,6 +138,11 @@ private:
     void ResetAllChassisBoards();
 
     /**
+     * @brief 复位所有业务链路（停止所有正在运行的业务链路）
+     */
+    void ResetStacks();
+
+    /**
      * @brief 自检所有机箱的所有板卡
      */
     void SelfcheckAllChassisBoards();

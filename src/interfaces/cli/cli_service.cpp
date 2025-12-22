@@ -138,6 +138,9 @@ void CliService::ProcessCommand(const std::string& command) {
     } else if (cmd == "reset" || cmd == "resetall" || cmd == "r") {
         // 复位所有机箱的所有板卡
         ResetAllChassisBoards();
+    } else if (cmd == "resetstacks" || cmd == "rs") {
+        // 复位所有业务链路（停止所有正在运行的业务链路）
+        ResetStacks();
     } else if (cmd == "selfcheck" || cmd == "check" || cmd == "sc") {
         // 自检所有机箱的所有板卡
         SelfcheckAllChassisBoards();
@@ -155,6 +158,7 @@ void CliService::PrintHelp() {
     std::cout << "  deploy, d <标签...>   - 启动指定标签的业务链路" << std::endl;
     std::cout << "  undeploy, u <标签...> - 停止指定标签的业务链路" << std::endl;
     std::cout << "  reset, resetall, r    - 复位所有机箱的所有板卡" << std::endl;
+    std::cout << "  resetstacks, rs       - 复位所有业务链路（停止所有正在运行的业务链路）" << std::endl;
     std::cout << "  selfcheck, check, sc  - 自检所有机箱的所有板卡" << std::endl;
     std::cout << "  help, h, ?            - 显示此帮助信息" << std::endl;
     std::cout << "  quit, exit, q         - 退出CLI服务" << std::endl;
@@ -165,6 +169,7 @@ void CliService::PrintHelp() {
     std::cout << "  d label1 label2       - 启动标签为label1和label2的业务链路" << std::endl;
     std::cout << "  u label1              - 停止标签为label1的业务链路" << std::endl;
     std::cout << "  reset                 - 复位所有机箱的所有板卡" << std::endl;
+    std::cout << "  resetstacks           - 复位所有业务链路（停止所有正在运行的业务链路）" << std::endl;
     std::cout << "  selfcheck             - 自检所有机箱的所有板卡（ping检查）" << std::endl;
 }
 
@@ -1202,6 +1207,31 @@ void CliService::SelfcheckAllChassisBoards() {
     PrintSeparator();
     
     spdlog::info("自检操作完成: 成功 {} 个板卡, 失败 {} 个板卡", totalSuccess, totalFailed);
+}
+
+void CliService::ResetStacks() {
+    if (!m_apiClient) {
+        spdlog::error("错误: API客户端未初始化");
+        return;
+    }
+
+    spdlog::info("开始复位所有业务链路（停止所有正在运行的业务链路）...");
+    
+    std::cout << "\n复位业务链路结果:" << std::endl;
+    PrintSeparator();
+    
+    // 调用API客户端的ResetStacks方法
+    bool success = m_apiClient->ResetStacks();
+    
+    if (success) {
+        std::cout << "✓ 业务链路复位成功" << std::endl;
+        spdlog::info("业务链路复位成功");
+    } else {
+        std::cout << "✗ 业务链路复位失败" << std::endl;
+        spdlog::error("业务链路复位失败");
+    }
+    
+    PrintSeparator();
 }
 
 } // namespace app::interfaces

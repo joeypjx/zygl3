@@ -51,7 +51,7 @@ std::vector<BoardInfoResponse> QywApiClient::GetBoardInfo() {
         try {
             // 解析JSON响应并转换为BoardInfoResponse对象列表
             result = ParseBoardInfoResponse(res->body);
-            spdlog::info("成功获取板卡信息，共 {} 条", result.size());
+            spdlog::debug("成功获取板卡信息，共 {} 条", result.size());
         } catch (const std::exception& e) {
             spdlog::error("解析板卡信息失败: {}", e.what());
         }
@@ -83,7 +83,7 @@ std::vector<StackInfoResponse> QywApiClient::GetStackInfo(bool& success) {
             // 解析JSON响应并转换为StackInfoResponse对象列表
             result = ParseStackInfoResponse(res->body);
             success = true;  // API调用成功
-            spdlog::info("成功获取业务链路信息，共 {} 条", result.size());
+            spdlog::debug("成功获取业务链路信息，共 {} 条", result.size());
         } catch (const std::exception& e) {
             spdlog::error("解析业务链路信息失败: {}", e.what());
             // success 保持为 false，表示解析失败
@@ -196,7 +196,7 @@ bool QywApiClient::SendHeartbeat(const std::string& ip, const std::string& port)
             // 解析标准响应格式：{ "code": 0, "message": "success", "data": "success" }
             // code=0 表示成功，其他值表示失败
             if (j.contains("code") && j["code"] == 0) {
-                spdlog::info("IP心跳检测发送成功，ip: {}, port: {}", ip, port);
+                spdlog::debug("IP心跳检测发送成功，ip: {}, port: {}", ip, port);
                 return true;
             } else {
                 spdlog::error("IP心跳检测响应异常，code: {}, message: {}", 
