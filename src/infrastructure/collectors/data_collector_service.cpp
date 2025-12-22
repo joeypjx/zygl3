@@ -244,6 +244,16 @@ void DataCollectorService::CheckAndMarkAbnormalBoards(int timeoutSeconds) {
             // 获取槽位号
             int slotNumber = board.GetBoardNumber();
             
+            // 打印状态异常或不在位的板卡信息
+            auto status = board.GetStatus();
+            if (status == app::domain::BoardOperationalStatus::Abnormal) {
+                spdlog::info("  板卡状态异常: 机箱{} 槽位{} IP:{}", 
+                           chassisNumber, slotNumber, board.GetAddress());
+            } else if (status == app::domain::BoardOperationalStatus::Offline) {
+                spdlog::info("  板卡不在位: 机箱{} 槽位{} IP:{}", 
+                           chassisNumber, slotNumber, board.GetAddress());
+            }
+            
             // 跳过槽位6和7的板卡超时检查
             if (slotNumber == 6 || slotNumber == 7) {
                 continue;
