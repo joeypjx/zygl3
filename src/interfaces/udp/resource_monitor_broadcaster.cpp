@@ -19,7 +19,7 @@
 namespace app::interfaces {
 
 // 工作模式标签前缀
-static const std::string WORK_MODE_LABEL_PREFIX = "模式";
+static const std::string WORK_MODE_LABEL_PREFIX = "工作模式";
 
 // ResourceMonitorBroadcaster 实现
 ResourceMonitorBroadcaster::ResourceMonitorBroadcaster(
@@ -214,6 +214,11 @@ bool ResourceMonitorBroadcaster::SendResourceMonitorResponse(uint32_t requestId)
 }
 
 void ResourceMonitorBroadcaster::BuildResponseData(ResourceMonitorResponse& response) {
+    // 初始化所有板卡状态为2（不在位）
+    memset(response.boardStatus, 2, sizeof(response.boardStatus));
+    // 初始化所有任务状态为2（没有任务）
+    memset(response.taskStatus, 2, sizeof(response.taskStatus));
+    
     // 获取所有机箱
     auto allChassis = m_chassisRepo->GetAll();
     
@@ -233,20 +238,32 @@ void ResourceMonitorBroadcaster::BuildResponseData(ResourceMonitorResponse& resp
 void ResourceMonitorBroadcaster::MapBoardStatusToArray(uint8_t* array, int chassisNumber) {
     auto chassis = m_chassisRepo->FindByNumber(chassisNumber);
     if (!chassis) {
+        // 机箱不存在，所有板卡状态设为2（不在位）
+        memset(array, 2, 12);
         return;
     }
     
     const auto& boards = chassis->GetAllBoards();
     
     // 协议要求12块板卡，我们取前12块（槽位1-12）
-    for (size_t i = 0; i < 12 && i < boards.size(); ++i) {
-        auto boardStatus = boards[i].GetStatus();
-        
-        // 0=板卡正常，1=板卡异常
-        if (boardStatus == app::domain::BoardOperationalStatus::Normal) {
-            array[i] = 0;
+    for (size_t i = 0; i < 12; ++i) {
+        if (i < boards.size()) {
+            auto boardStatus = boards[i].GetStatus();
+            
+            // 根据协议：0=板卡正常，1=板卡异常，2=板卡不在槽位
+            if (boardStatus == app::domain::BoardOperationalStatus::Normal) {
+                array[i] = 0;  // 板卡正常
+            } else if (boardStatus == app::domain::BoardOperationalStatus::Abnormal) {
+                array[i] = 1;  // 板卡异常
+            } else if (boardStatus == app::domain::BoardOperationalStatus::Offline) {
+                array[i] = 2;  // 板卡不在槽位
+            } else {
+                // Unknown状态，默认设为2（不在位）
+                array[i] = 2;
+            }
         } else {
-            array[i] = 1;
+            // 板卡槽位不存在，设为2（不在位）
+            array[i] = 2;
         }
     }
 }
@@ -415,6 +432,13 @@ bool ResourceMonitorBroadcaster::HandleTaskStartRequest(const TaskStartRequest& 
         return false;
     }
 
+    // 根据协议：启动策略 0：先停止当前任务，再启动任务。如果不是0，则不处理，也不返回响应
+    if (request.startStrategy != 0) {
+        spdlog::info("任务启动请求被忽略: 工作模式={} 启动策略={} (非0，不处理也不返回响应)", 
+                     request.workMode, request.startStrategy);
+        return false;  // 不处理，也不返回响应
+    }
+
     // 构建响应报文
     TaskStartResponse response;
     memset(&response, 0, sizeof(response));
@@ -497,20 +521,10 @@ void ResourceMonitorBroadcaster::BuildTaskStartResponse(TaskStartResponse& respo
         currentLabel = m_currentRunningLabel;
     }
 
-    // 调用API启动新任务
-    // startStrategy == 0 表示需要先停止当前任务，通过 stop 参数传递给 DeployStacks
+    // 根据协议：启动策略 0：先停止当前任务，再启动任务
+    // 这里已经确保 startStrategy == 0（在HandleTaskStartRequest中已检查）
+    // 通过 stop 参数传递给 DeployStacks，stop=1 表示先停止当前任务
     int stop = 1;
-
-    // TODO startStrategy == 1
-
-    // 如果请求的任务已经在运行，且不需要停止（startStrategy != 0），直接返回成功
-    // 如果需要停止（startStrategy == 0），则允许重启任务
-    // if (!currentLabel.empty() && currentLabel == label && stop == 0) {
-    //     spdlog::info("任务已在运行: {}", label);
-    //     response.startResult = 0;  // 成功
-    //     strncpy(response.resultDesc, "任务已在运行", 63);
-    //     return;
-    // }
     
     std::vector<std::string> labels;
     labels.push_back(label);
@@ -555,10 +569,21 @@ void ResourceMonitorBroadcaster::BuildTaskStopResponse(TaskStopResponse& respons
     }
 
     if (currentLabel.empty()) {
-        // 没有正在运行的任务
-        response.stopResult = 0;
-        strncpy(response.resultDesc, "无正在运行的任务", 63);
-        spdlog::info("无正在运行的任务");
+        // 没有正在运行的任务，调用ResetStacks方法
+        spdlog::info("无正在运行的任务，调用ResetStacks方法");
+        bool resetResult = m_apiClient->ResetStacks();
+        
+        if (resetResult) {
+            // 复位成功
+            response.stopResult = 0;
+            strncpy(response.resultDesc, "无正在运行的任务，业务链路复位成功", 63);
+            spdlog::info("业务链路复位成功");
+        } else {
+            // 复位失败
+            response.stopResult = 1;
+            strncpy(response.resultDesc, "无正在运行的任务，业务链路复位失败", 63);
+            spdlog::error("业务链路复位失败");
+        }
         return;
     }
 
@@ -595,23 +620,23 @@ void ResourceMonitorBroadcaster::BuildTaskStopResponse(TaskStopResponse& respons
 }
 
 std::string ResourceMonitorBroadcaster::WorkModeToLabel(uint16_t workMode) {
-    // 将工作模式编号转换为标签名称，TODO 待修改
-    // 例如：1 -> "模式1", 2 -> "模式2", 3 -> "模式3"
+    // 将工作模式编号转换为标签名称
+    // 例如：1 -> "工作模式1", 2 -> "工作模式2", 3 -> "工作模式3"
     return WORK_MODE_LABEL_PREFIX + std::to_string(workMode);
 }
 
 uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
     // 将标签名称转换为工作模式编号
-    // 例如："模式1" -> 1, "模式2" -> 2, "模式3" -> 3
+    // 例如："工作模式1" -> 1, "工作模式2" -> 2, "工作模式3" -> 3
     if (label.empty()) {
         return 0;  // 没有运行任务时返回0
     }
     
-    // 检查是否以"模式"开头（UTF-8编码中，"模式"占6个字节）
+    // 检查是否以"工作模式"开头
     if (label.length() >= WORK_MODE_LABEL_PREFIX.length() && 
         label.substr(0, WORK_MODE_LABEL_PREFIX.length()) == WORK_MODE_LABEL_PREFIX) {
         try {
-            // 提取"模式"后面的数字
+            // 提取"工作模式"后面的数字
             std::string numStr = label.substr(WORK_MODE_LABEL_PREFIX.length());
             return static_cast<uint16_t>(std::stoul(numStr));
         } catch (const std::exception&) {
@@ -620,7 +645,7 @@ uint16_t ResourceMonitorBroadcaster::LabelToWorkMode(const std::string& label) {
         }
     }
     
-    // 如果不是"模式X"格式，返回0
+    // 如果不是"工作模式X"格式，返回0
     return 0;
 }
 
@@ -718,7 +743,8 @@ void ResourceMonitorBroadcaster::BuildChassisSelfCheckResponse(ChassisSelfCheckR
 
     // 遍历12块板卡
     for (int boardIdx = 0; boardIdx < 12; ++boardIdx) {
-        // 检查是否需要自检该板卡（0：自检，1：不需自检）
+        // 检查是否需要自检该板卡
+        // 协议：0：自检 1：不需自检，其他数字：不自检
         if (request.checkFlags[boardIdx] == 0) {
             // 需要自检
             if (boardIdx < static_cast<int>(boards.size())) {
@@ -741,7 +767,7 @@ void ResourceMonitorBroadcaster::BuildChassisSelfCheckResponse(ChassisSelfCheckR
                 response.checkResults[boardIdx] = 1;  // 板卡不存在，自检失败
             }
         } else {
-            // 不需自检，保持为1（没有自检）
+            // 不需自检（1或其他数字），保持为1（没有自检或自检失败）
             response.checkResults[boardIdx] = 1;
         }
     }
@@ -788,11 +814,12 @@ void ResourceMonitorBroadcaster::BuildChassisResetResponse(ChassisResetResponse&
             size_t flagIndex = chassisIdx * 12 + boardIdx;
             
             // 检查是否需要复位该板卡
+            // 协议：0：不复位 1：需要复位，其他数字：不复位
             if (request.resetFlags[flagIndex] == 1) {
                 slotNumbers.push_back(boardIdx + 1);  // 槽位号从1开始
                 flagIndices.push_back(flagIndex);
             } else {
-                // 不需要复位，保持为1（没有复位）
+                // 不需要复位（0或其他数字），保持为1（没有复位或复位失败）
                 response.resetResults[flagIndex] = 1;
             }
         }
