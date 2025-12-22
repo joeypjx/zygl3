@@ -53,6 +53,24 @@ int ConfigManager::GetInt(const std::string& pointer, int def) {
     }
 }
 
+bool ConfigManager::GetBool(const std::string& pointer, bool def) {
+    try {
+        const json& j = s_config.at(json::json_pointer(pointer));
+        // 支持布尔值、整数（0=false, 非0=true）、字符串（"true"/"false"）
+        if (j.is_boolean()) {
+            return j.get<bool>();
+        } else if (j.is_number()) {
+            return j.get<int>() != 0;
+        } else if (j.is_string()) {
+            std::string str = j.get<std::string>();
+            return (str == "true" || str == "True" || str == "TRUE" || str == "1");
+        }
+        return def;
+    } catch (...) {
+        return def;
+    }
+}
+
 uint16_t ConfigManager::GetHexUint16(const std::string& pointer, uint16_t def) {
     try {
         std::string hexStr = s_config.at(json::json_pointer(pointer)).get<std::string>();

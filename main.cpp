@@ -13,14 +13,57 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <string>
+#include <cstdlib>
 
 using namespace app::infrastructure;
 using namespace app::domain;
 using namespace app::interfaces;
 
-int main() {
+void PrintUsage(const char* programName) {
+    std::cout << "用法: " << programName << " [选项]\n"
+              << "选项:\n"
+              << "  -c, --config <文件>    指定配置文件路径 (默认: config.json)\n"
+              << "  -h, --help             显示此帮助信息\n"
+              << "\n"
+              << "也可以通过环境变量 ZYGL_CONFIG 指定配置文件路径\n"
+              << std::endl;
+}
+
+std::string GetConfigPath(int argc, char* argv[]) {
+    // 1. 检查命令行参数
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "-h" || arg == "--help") {
+            PrintUsage(argv[0]);
+            exit(0);
+        } else if (arg == "-c" || arg == "--config") {
+            if (i + 1 < argc) {
+                return argv[i + 1];
+            } else {
+                std::cerr << "错误: -c/--config 选项需要指定配置文件路径" << std::endl;
+                PrintUsage(argv[0]);
+                exit(1);
+            }
+        }
+    }
+    
+    // 2. 检查环境变量
+    const char* envConfig = std::getenv("ZYGL_CONFIG");
+    if (envConfig != nullptr) {
+        return std::string(envConfig);
+    }
+    
+    // 3. 使用默认值
+    return "config.json";
+}
+
+int main(int argc, char* argv[]) {
+    // 0. 获取配置文件路径
+    std::string configPath = GetConfigPath(argc, argv);
+    
     // 0. 加载配置
-    ConfigManager::LoadFromFile("config.json");
+    ConfigManager::LoadFromFile(configPath);
     
     // 0.1. 初始化日志系统（同时输出到终端和文件）
     LoggerConfig::InitializeFromConfig();
@@ -54,9 +97,10 @@ int main() {
     apiClient->SetEndpoint("stackinfo", ConfigManager::GetString("/api/endpoints/stackinfo", "/api/v1/external/qyw/stackinfo"));
     apiClient->SetEndpoint("deploy", ConfigManager::GetString("/api/endpoints/deploy", "/api/v1/external/qyw/deploy"));
     apiClient->SetEndpoint("undeploy", ConfigManager::GetString("/api/endpoints/undeploy", "/api/v1/external/qyw/undeploy"));
-    apiClient->SetEndpoint("heartbeat", ConfigManager::GetString("/api/endpoints/heartbeat", "/api/v1/sys-config/client/up"));
-    
-    // 5. 创建CLI服务
+    apiClient->SetEndpoint("heartbeat", ConfigManager::GetString("/api/endpoints/heartbeat", "/api/v1/external/qyw/config"));
+    apiClient->SetEndpoint("reset", ConfigManager::GetString("/api/endpoints/reset", "/api/v1/stacks/labels/reset"));
+
+    // 5. 创建CLI服务   
     spdlog::info("启动CLI服务...");
     auto cliService = std::make_shared<CliService>(chassisRepo, stackRepo, apiClient);
     cliService->Start();
@@ -81,16 +125,22 @@ int main() {
     );
     broadcaster->Start();
 
-    // 创建心跳服务（读取配置）
-    spdlog::info("创建心跳服务...");
-    std::string haMulticastGroup = ConfigManager::GetString("/ha/multicast_group", "224.100.200.16");
-    uint16_t haHeartbeatPort = static_cast<uint16_t>(ConfigManager::GetInt("/ha/heartbeat/port", 9999));
-    int haPriority = ConfigManager::GetInt("/ha/priority", 0);
-    int haHeartbeatInterval = ConfigManager::GetInt("/ha/heartbeat/interval_seconds", 3);
-    int haTimeoutThreshold = ConfigManager::GetInt("/ha/heartbeat/timeout_seconds", 9);
-    auto heartbeatService = std::make_shared<HeartbeatService>(
-        haMulticastGroup, haHeartbeatPort, haPriority, haHeartbeatInterval, haTimeoutThreshold);
-    heartbeatService->Start(HeartbeatService::Role::Unknown);  // 从Unknown开始，自动协商
+    // 创建心跳服务（读取配置，仅在ha/enabled为true时创建）
+    std::shared_ptr<HeartbeatService> heartbeatService = nullptr;
+    bool haEnabled = ConfigManager::GetBool("/ha/enabled", false);
+    if (haEnabled) {
+        spdlog::info("创建心跳服务...");
+        std::string haMulticastGroup = ConfigManager::GetString("/ha/multicast_group", "224.100.200.16");
+        uint16_t haHeartbeatPort = static_cast<uint16_t>(ConfigManager::GetInt("/ha/heartbeat/port", 9999));
+        int haPriority = ConfigManager::GetInt("/ha/priority", 0);
+        int haHeartbeatInterval = ConfigManager::GetInt("/ha/heartbeat/interval_seconds", 3);
+        int haTimeoutThreshold = ConfigManager::GetInt("/ha/heartbeat/timeout_seconds", 9);
+        heartbeatService = std::make_shared<HeartbeatService>(
+            haMulticastGroup, haHeartbeatPort, haPriority, haHeartbeatInterval, haTimeoutThreshold);
+        heartbeatService->Start(HeartbeatService::Role::Unknown);  // 从Unknown开始，自动协商
+    } else {
+        spdlog::info("HA功能已禁用（ha/enabled=false），跳过心跳服务创建");
+    }
     
     auto listener = std::make_shared<ResourceMonitorListener>(
         broadcaster, heartbeatService,
@@ -128,7 +178,7 @@ int main() {
     
     // 10. 创建数据采集服务（读取配置）
     int intervalSeconds = ConfigManager::GetInt("/collector/interval_seconds", 10);
-    int boardTimeoutSeconds = ConfigManager::GetInt("/collector/board_timeout_seconds", 120);
+    int boardTimeoutSeconds = ConfigManager::GetInt("/collector/board_timeout_seconds", 60);
     spdlog::info("创建数据采集服务（采集间隔：{}秒）...", intervalSeconds);
     DataCollectorService collector(chassisRepo, stackRepo, apiClient, intervalSeconds, boardTimeoutSeconds);
     
@@ -153,7 +203,9 @@ int main() {
     bmcReceiver->Stop();
     listener->Stop();
     broadcaster->Stop();
-    heartbeatService->Stop();
+    if (heartbeatService) {
+        heartbeatService->Stop();
+    }
     cliService->Stop();
     
     spdlog::info("系统运行结束");

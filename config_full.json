@@ -1,0 +1,73 @@
+{
+  "_comment": "完整版配置文件 - 包含所有配置项",
+  "api": {
+    "base_url": "192.168.2.5",
+    "port": 8080,
+    "endpoints": {
+      "boardinfo": "/api/v1/external/qyw/boardinfo",
+      "stackinfo": "/api/v1/external/qyw/stackinfo",
+      "deploy": "/api/v1/stacks/labels/deploy",
+      "undeploy": "/api/v1/stacks/labels/undeploy",
+      "heartbeat": "/api/v1/external/qyw/config",
+      "reset": "/api/v1/stacks/labels/reset"
+    },
+    "account": "admin",
+    "password": "12q12w12ee"
+  },
+  "alert_server": {
+    "port": 8888,
+    "host": "192.168.2.5"
+  },
+  "udp": {
+    "port": 4106,
+    "broadcaster": {
+      "multicast_group": "234.186.1.99"
+    },
+    "listener": {
+      "multicast_group": "234.186.1.98"
+    },
+    "commands": {
+      "resource_monitor": "0xF000",
+      "resource_monitor_resp": "0xF100",
+      "chassis_reset": "0xF001",
+      "chassis_reset_resp": "0xF101",
+      "chassis_self_check": "0xF002",
+      "chassis_self_check_resp": "0xF102",
+      "task_start": "0xF003",
+      "task_start_resp": "0xF103",
+      "task_stop": "0xF004",
+      "task_stop_resp": "0xF104",
+      "task_query": "0xF005",
+      "task_query_resp": "0xF105",
+      "bmc_query": "0xF006",
+      "bmc_query_resp": "0xF106",
+      "fault_report": "0xF107"
+    }
+  },
+  "collector": {
+    "interval_seconds": 10,
+    "board_timeout_seconds": 60
+  },
+  "bmc": {
+    "multicast_group": "224.100.200.15",
+    "port": 5715
+  },
+  "ha": {
+    "enabled": true,
+    "multicast_group": "224.100.200.16",
+    "heartbeat": {
+      "port": 9999,
+      "interval_seconds": 3,
+      "timeout_seconds": 9
+    },
+    "priority": 0
+  },
+  "logging": {
+    "log_dir": "/var/log/zygl/logs",
+    "level": "info",
+    "enable_console": 1,
+    "enable_file": 1,
+    "max_file_size_mb": 10,
+    "max_files": 5
+  }
+}
