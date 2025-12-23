@@ -62,7 +62,7 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Debug 配置（用于 gdb 调试）
+# 构建类型配置
 # 设置默认构建类型为 Debug（如果未指定）
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
@@ -76,6 +76,21 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     else()
         # GCC/Clang: -g 生成调试信息，-O0 禁用优化
         target_compile_options(zygl PRIVATE -g -O0)
+    endif()
+endif()
+
+# Release 模式下的编译选项
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        # MSVC: /O2 最大优化，/DNDEBUG 定义 NDEBUG 宏
+        target_compile_options(zygl PRIVATE /O2 /DNDEBUG)
+        target_compile_definitions(zygl PRIVATE NDEBUG)
+    else()
+        # GCC/Clang: -O3 最大优化，-DNDEBUG 定义 NDEBUG 宏，-s 去除符号表
+        target_compile_options(zygl PRIVATE -O3 -DNDEBUG)
+        target_compile_definitions(zygl PRIVATE NDEBUG)
+        # 可选：去除调试符号以减小文件大小（如果需要调试信息，可以去掉 -s）
+        # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
     endif()
 endif()
 
