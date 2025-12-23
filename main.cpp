@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
     // 设置API端点路径
     apiClient->SetEndpoint("boardinfo", ConfigManager::GetString("/api/endpoints/boardinfo", "/api/v1/external/qyw/boardinfo"));
     apiClient->SetEndpoint("stackinfo", ConfigManager::GetString("/api/endpoints/stackinfo", "/api/v1/external/qyw/stackinfo"));
-    apiClient->SetEndpoint("deploy", ConfigManager::GetString("/api/endpoints/deploy", "/api/v1/external/qyw/deploy"));
-    apiClient->SetEndpoint("undeploy", ConfigManager::GetString("/api/endpoints/undeploy", "/api/v1/external/qyw/undeploy"));
+    apiClient->SetEndpoint("deploy", ConfigManager::GetString("/api/endpoints/deploy", "/api/v1/stacks/labels/deploy"));
+    apiClient->SetEndpoint("undeploy", ConfigManager::GetString("/api/endpoints/undeploy", "/api/v1/stacks/labels/undeploy"));
     apiClient->SetEndpoint("heartbeat", ConfigManager::GetString("/api/endpoints/heartbeat", "/api/v1/external/qyw/config"));
     apiClient->SetEndpoint("reset", ConfigManager::GetString("/api/endpoints/reset", "/api/v1/stacks/labels/reset"));
 
