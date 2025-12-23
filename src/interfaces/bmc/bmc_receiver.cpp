@@ -205,7 +205,7 @@ void BmcReceiver::HandleReceivedPacket(const char* data, size_t length) {
         if (!presenceMap.empty()) {
             int chassisNumber = info->boxid;
             size_t updatedCount = m_chassisRepo->UpdateAllBoardsStatus(chassisNumber, presenceMap);
-            spdlog::info("根据BMC报文更新机箱 {} 的 {} 个板卡状态", chassisNumber, updatedCount);
+            spdlog::debug("根据BMC报文更新机箱 {} 的 {} 个板卡状态", chassisNumber, updatedCount);
         }
     } else {
         spdlog::warn("BMC接收器未设置机箱仓储，无法更新板卡状态");
